@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% set edit_mode = product is not none %}
+{% block title %}{{ "Edit" if edit_mode else "Add" }} Product — SheMarket{% endblock %}
+
+{% block content %}
+<section class="seller-reg-section py-5">
+    <div class="container">
+
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+
+                <!-- Breadcrumb -->
+                <div class="mb-4">
+                    <a href="{{ url_for('products.list_products') }}" class="text-secondary text-decoration-none small">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Products
+                    </a>
+                    <h2 class="fw-bold mt-2">{{ "Edit Product" if edit_mode else "Add New Product" }}</h2>
+                </div>
+
+                <form id="productForm" method="POST"
+                      enctype="multipart/form-data"
+                      action="{{ url_for('products.edit_product', product_id=product.id) if edit_mode else url_for('products.add_product') }}"
+                      novalidate>
+
+                    <!-- ── Product Images ──────────────────────────── -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="fw-bold mb-0"><i class="bi bi-images text-primary me-2"></i>Product Images</h6>
+                                <span class="text-secondary small">Up to 6 images · PNG, JPG, WEBP · Max 4 MB each</span>
+                            </div>
+
+                            {% if edit_mode and product.images %}
+                            <!-- Existing images -->
+                            <div class="row g-2 mb-3" id="existingImages">
+                                {% for img in product.images %}
+                                <div class="col-6 col-sm-4 col-md-3 col-lg-2" id="imgSlot{{ img.id }}">
+                                    <div class="product-img-slot position-relative rounded-3 overflow-hidden
+                                                {{ 'img-slot--primary' if img.is_primary }}">
+                                        <img src="{{ img.url }}" alt="Product image"
+                                             class="w-100 h-100 object-fit-cover">
+
+                                        <!-- Primary badge -->
+                                        {% if img.is_primary %}
+                                        <span class="img-primary-badge">
+                                            <i class="bi bi-star-fill"></i> Primary
+                                        </span>
+                                        {% endif %}
+
+                                        <!-- Action overlay -->
+                                        <div class="img-slot-overlay d-flex flex-column gap-1 align-items-center justify-content-center">
+                                            {% if not img.is_primary %}
+                                            <form method="POST" action="{{ url_for('products.set_primary_image', image_id=img.id) }}">
+                                                <button type="submit" class="btn btn-light btn-xs rounded-pill px-2 py-0">
+                                                    <i class="bi bi-star me-1"></i>Set Primary
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            <form method="POST" action="{{ url_for('products.delete_product_image', image_id=img.id) }}"
+                                                  onsubmit="return confirm('Remove this image?')">
+                                                <button type="submit" class="btn btn-danger btn-xs rounded-pill px-2 py-0">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% set remaining = 6 - product.images | length %}
+                            {% else %}
+                            {% set remaining = 6 %}
+                            {% endif %}
+
+                            <!-- New image upload area -->
+                            {% if not edit_mode or remaining > 0 %}
+                            <div class="upload-drop-zone rounded-3 p-4 text-center" id="imgDropZone">
+                                <i class="bi bi-cloud-upload fs-2 text-primary mb-2 d-block"></i>
+                                <div class="text-secondary small mb-2">
+                                    Drag & drop images here, or click to browse
+                                    {% if edit_mode %}({{ remaining }} slot{{ 's' if remaining != 1 }} remaining){% endif %}
+                                </div>
+                                <label class="btn btn-outline-primary btn-sm" for="imageInput">
+                                    <i class="bi bi-folder2-open me-1"></i>Choose Images
+                                </label>
+                                <input type="file" id="imageInput" name="images"
+                                       class="d-none" multiple
+                                       accept="image/png,image/jpeg,image/webp"
+                                       data-max="{{ remaining }}">
+                            </div>
+
+                            <!-- New image previews -->
+                            <div class="row g-2 mt-2" id="newImagePreviews"></div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+
+                    <!-- ── Product Info ────────────────────────────── -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Product Details</h6>
+                            <div class="row g-3">
+
+                                <!-- Name -->
+                                <div class="col-12">
+                                    <label for="name" class="form-label fw-semibold">
+                                        Product Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="name" name="name" class="form-control"
+                                           placeholder="e.g. Handwoven Cotton Tote Bag"
+                                           value="{{ product.name if edit_mode else form_data.get('name', '') }}"
+                                           required minlength="2" maxlength="200">
+                                    <div class="invalid-feedback">Product name is required (2–200 characters).</div>
+                                </div>
+
+                                <!-- Category + Status -->
+                                <div class="col-md-6">
+                                    <label for="category" class="form-label fw-semibold">
+                                        Category <span class="text-danger">*</span>
+                                    </label>
+                                    <select id="category" name="category" class="form-select" required>
+                                        <option value="" disabled {{ "selected" if not edit_mode and not form_data.get('category') }}>
+                                            Select category…
+                                        </option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat }}"
+                                            {{ "selected" if (edit_mode and product.category == cat) or form_data.get('category') == cat }}>
+                                            {{ cat }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select a category.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="status" class="form-label fw-semibold">Status</label>
+                                    <select id="status" name="status" class="form-select">
+                                        {% for s in [("active","Active"),("inactive","Inactive"),("out_of_stock","Out of Stock")] %}
+                                        <option value="{{ s[0] }}"
+                                            {{ "selected" if (edit_mode and product.status.value == s[0]) or form_data.get('status') == s[0] }}>
+                                            {{ s[1] }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Price + Quantity -->
+                                <div class="col-md-6">
+                                    <label for="price" class="form-label fw-semibold">
+                                        Price (USD) <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0">$</span>
+                                        <input type="number" id="price" name="price" class="form-control border-start-0"
+                                               placeholder="0.00" min="0.01" step="0.01"
+                                               value="{{ '%.2f'|format(product.price|float) if edit_mode else form_data.get('price', '') }}"
+                                               required>
+                                        <div class="invalid-feedback">Enter a valid price greater than $0.</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="stock_qty" class="form-label fw-semibold">
+                                        Stock Quantity <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number" id="stock_qty" name="stock_qty" class="form-control"
+                                           placeholder="0" min="0" step="1"
+                                           value="{{ product.stock_qty if edit_mode else form_data.get('stock_qty', '0') }}"
+                                           required>
+                                    <div class="form-text">Setting to 0 will mark product as Out of Stock.</div>
+                                    <div class="invalid-feedback">Quantity must be 0 or more.</div>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-12">
+                                    <label for="description" class="form-label fw-semibold">
+                                        Description <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea id="description" name="description" class="form-control"
+                                              rows="5" required minlength="20" maxlength="2000"
+                                              placeholder="Describe your product — materials, dimensions, care instructions…">{{ product.description if edit_mode else form_data.get('description', '') }}</textarea>
+                                    <div class="d-flex justify-content-between">
+                                        <div class="invalid-feedback">Description must be at least 20 characters.</div>
+                                        <small class="text-secondary mt-1" id="descCount">0 / 2000</small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-flex gap-3 justify-content-end">
+                        <a href="{{ url_for('products.list_products') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 fw-semibold" id="productSubmit">
+                            <span class="spinner-border spinner-border-sm me-2 d-none" id="productSpinner"></span>
+                            <i class="bi bi-{{ 'check2-circle' if edit_mode else 'plus-circle' }} me-2" id="productIcon"></i>
+                            {{ "Save Changes" if edit_mode else "List Product" }}
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MAX_SIZE_BYTES = 4 * 1024 * 1024;
+const ALLOWED_TYPES  = ["image/png", "image/jpeg", "image/webp"];
+const maxSlots       = parseInt(document.getElementById("imageInput")?.dataset.max || "6");
+let   selectedFiles  = [];
+
+// ── Description counter ──────────────────────────────────────────
+const descEl   = document.getElementById("description");
+const countEl  = document.getElementById("descCount");
+function updateCount() {
+    const len = descEl.value.length;
+    countEl.textContent = `${len} / 2000`;
+    countEl.className   = len > 1900 ? "text-danger mt-1 small" : "text-secondary mt-1 small";
+}
+descEl.addEventListener("input", updateCount);
+updateCount();
+
+// ── Image selection & preview ────────────────────────────────────
+const imageInput   = document.getElementById("imageInput");
+const previewGrid  = document.getElementById("newImagePreviews");
+const dropZone     = document.getElementById("imgDropZone");
+
+function renderPreviews() {
+    previewGrid.innerHTML = "";
+    selectedFiles.forEach(function (file, idx) {
+        const col  = document.createElement("div");
+        col.className = "col-6 col-sm-4 col-md-3 col-lg-2";
+
+        const slot = document.createElement("div");
+        slot.className = "product-img-slot rounded-3 overflow-hidden position-relative";
+
+        const img  = document.createElement("img");
+        img.className = "w-100 h-100 object-fit-cover";
+        img.src = URL.createObjectURL(file);
+
+        const badge = document.createElement("span");
+        badge.className = "img-primary-badge";
+        badge.innerHTML = idx === 0 ? '<i class="bi bi-star-fill"></i> Primary' : `<i class="bi bi-image"></i> ${idx + 1}`;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-danger btn-xs rounded-pill px-2 py-0 position-absolute top-0 end-0 m-1";
+        removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+        removeBtn.addEventListener("click", function () {
+            selectedFiles.splice(idx, 1);
+            syncFileInput();
+            renderPreviews();
+        });
+
+        slot.appendChild(img);
+        slot.appendChild(badge);
+        slot.appendChild(removeBtn);
+        col.appendChild(slot);
+        previewGrid.appendChild(col);
+    });
+}
+
+function syncFileInput() {
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    imageInput.files = dt.files;
+}
+
+function addFiles(files) {
+    const available = maxSlots - selectedFiles.length;
+    let added = 0;
+    for (const file of files) {
+        if (added >= available) {
+            alert(`You can only add ${maxSlots} image(s) total.`);
+            break;
+        }
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            alert(`${file.name}: only PNG, JPG, WEBP allowed.`);
+            continue;
+        }
+        if (file.size > MAX_SIZE_BYTES) {
+            alert(`${file.name}: exceeds 4 MB limit.`);
+            continue;
+        }
+        selectedFiles.push(file);
+        added++;
+    }
+    syncFileInput();
+    renderPreviews();
+}
+
+if (imageInput) {
+    imageInput.addEventListener("change", function () {
+        addFiles(Array.from(this.files));
+        this.value = ""; // reset so same file can be re-added after removal
+    });
+}
+
+if (dropZone) {
+    dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drop-hover"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drop-hover"));
+    dropZone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        dropZone.classList.remove("drop-hover");
+        addFiles(Array.from(e.dataTransfer.files));
+    });
+}
+
+// ── Form validation & submit ─────────────────────────────────────
+document.getElementById("productForm").addEventListener("submit", function (e) {
+    if (!this.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add("was-validated");
+        const first = this.querySelector(":invalid");
+        if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+    }
+    this.classList.add("was-validated");
+    document.getElementById("productSpinner").classList.remove("d-none");
+    document.getElementById("productIcon").classList.add("d-none");
+    document.getElementById("productSubmit").disabled = true;
+});
+</script>
+{% endblock %}

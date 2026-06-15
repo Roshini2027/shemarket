@@ -1,0 +1,77 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Verifications{% endblock %}
+{% block page_title %}<i class="bi bi-patch-check-fill me-2 text-primary"></i>Business Verification Queue{% endblock %}
+
+{% block content %}
+
+        <!-- Tabs -->
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            {% set tabs = [
+                ("pending_verification", "Pending",  "warning", counts.pending),
+                ("verified",             "Verified", "success", counts.verified),
+                ("rejected",             "Rejected", "danger",  counts.rejected),
+                ("all",                  "All",      "secondary", counts.pending + counts.verified + counts.rejected),
+            ] %}
+            {% for val, label, color, count in tabs %}
+            <a href="{{ url_for('admin.verification_list', status=val) }}"
+               class="btn btn-sm rounded-pill px-3 {{ 'btn-' + color if status_filter == val else 'btn-outline-' + color }}">
+                {{ label }}
+                <span class="badge bg-white text-{{ color }} ms-1 rounded-pill">{{ count }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if businesses %}
+        <div class="row g-3 mt-0">
+            {% for biz in businesses %}
+            {% set bc, bl = biz.status_badge %}
+            <div class="col-12">
+                <a href="{{ url_for('admin.verification_detail', business_id=biz.id) }}"
+                   class="card border-0 shadow-sm rounded-4 text-decoration-none admin-biz-row">
+                    <div class="card-body p-3 d-flex align-items-center gap-4 flex-wrap">
+
+                        <img src="{{ biz.logo_url }}" alt="{{ biz.name }}"
+                             class="rounded-3 flex-shrink-0"
+                             style="width:56px;height:56px;object-fit:cover;">
+
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-semibold text-dark">{{ biz.name }}</span>
+                                <span class="badge bg-{{ bc }} rounded-pill">{{ bl }}</span>
+                                {% if biz.docs_complete() %}
+                                <span class="badge bg-success-soft text-success rounded-pill">
+                                    <i class="bi bi-files me-1"></i>Docs Complete
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning-soft text-warning rounded-pill">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Docs Incomplete
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-secondary small mt-1">
+                                {{ biz.category }} &bull;
+                                {{ biz.owner.full_name }} &bull;
+                                {{ biz.owner.email }}
+                            </div>
+                        </div>
+
+                        <div class="text-secondary small text-end flex-shrink-0">
+                            <div>{{ biz.verification_documents | length }} / 3 docs</div>
+                            <div>{{ biz.created_at.strftime("%b %d, %Y") }}</div>
+                        </div>
+
+                        <i class="bi bi-chevron-right text-secondary flex-shrink-0"></i>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-secondary opacity-50"></i>
+            <p class="text-secondary mt-3">No businesses in this category.</p>
+        </div>
+        {% endif %}
+
+{% endblock %}

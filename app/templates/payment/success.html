@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Payment Successful — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:860px;">
+
+    <!-- Progress (all done) -->
+    <div class="checkout-progress d-flex align-items-center justify-content-center gap-0 mb-5">
+        {% for label, icon in [("Cart","bi-cart3"),("Shipping","bi-truck"),("Payment","bi-credit-card-2-front"),("Done","bi-check-lg")] %}
+        <div class="checkout-step done {{ 'active' if loop.last }}">
+            <div class="checkout-step-circle"><i class="bi {{ icon }}"></i></div>
+            <div class="checkout-step-label">{{ label }}</div>
+        </div>
+        {% if not loop.last %}<div class="checkout-step-line done"></div>{% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Success banner -->
+    <div class="text-center mb-5">
+        <div class="confirm-success-icon mb-4">
+            <i class="bi bi-check-lg"></i>
+        </div>
+        <h3 class="fw-bold mb-1">Payment Successful!</h3>
+        <p class="text-secondary mb-2">
+            Thank you, <strong>{{ current_user.full_name.split()[0] }}</strong>.
+            Your payment has been received and your order is confirmed.
+        </p>
+        <div class="d-inline-flex align-items-center gap-2 bg-success-soft text-success
+                    rounded-pill px-4 py-2 small fw-semibold border border-success-subtle">
+            <i class="bi bi-receipt-cutoff me-1"></i>
+            Transaction ID: <strong class="ms-1 font-monospace">{{ payment.transaction_id }}</strong>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Items + totals -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    <div class="p-4 pb-2">
+                        <h6 class="fw-bold"><i class="bi bi-bag-check text-primary me-2"></i>Items Ordered</h6>
+                    </div>
+                    {% for item in order.items %}
+                    <div class="d-flex gap-3 px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
+                        <img src="{{ item.product.primary_image_url }}"
+                             alt="{{ item.product.name }}"
+                             class="confirm-item-thumb rounded-3 object-fit-cover flex-shrink-0">
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold small">{{ item.product.name }}</div>
+                            <div class="text-secondary" style="font-size:0.75rem;">{{ item.product.business.name }}</div>
+                            <div class="text-secondary small">Qty {{ item.quantity }} × ₹{{ "%.2f" | format(item.unit_price | float) }}</div>
+                        </div>
+                        <div class="text-end flex-shrink-0 d-flex align-items-center">
+                            <span class="fw-bold small text-primary">
+                                ₹{{ "%.2f" | format(item.unit_price | float * item.quantity) }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="p-4 pt-3 border-top">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-secondary">Subtotal</span>
+                            <span>₹{{ "%.2f" | format(subtotal) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span class="text-secondary">Shipping</span>
+                            <span>{% if shipping == 0 %}<span class="text-success">Free</span>{% else %}₹{{ "%.2f" | format(shipping) }}{% endif %}</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Total Paid</span>
+                            <span class="text-primary">₹{{ "%.2f" | format(order.total_amount | float) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment + Order details -->
+        <div class="col-lg-5">
+
+            <!-- Transaction receipt -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-receipt text-primary me-2"></i>Payment Receipt
+                    </h6>
+                    <dl class="mb-0">
+                        {% set rows = [
+                            ("Transaction ID",  payment.transaction_id,              "font-monospace fw-bold small"),
+                            ("Payment Method",  payment.method_label,                "fw-semibold small"),
+                            ("Amount Paid",     "₹" ~ "%.2f" | format(order.total_amount | float), "fw-bold text-primary"),
+                            ("Payment Date",    payment.payment_date.strftime("%d %b %Y, %I:%M %p"), "small"),
+                            ("Order Number",    "#" ~ "%05d" | format(order.id),     "fw-bold small"),
+                        ] %}
+                        {% for label, value, cls in rows %}
+                        <div class="d-flex justify-content-between py-2 {% if not loop.last %}border-bottom{% endif %}">
+                            <dt class="text-secondary fw-normal small">{{ label }}</dt>
+                            <dd class="mb-0 text-end {{ cls }}">{{ value }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Status card -->
+            <div class="card border-0 rounded-4 what-next-card">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3 text-white"><i class="bi bi-stars me-2"></i>What's next?</h6>
+                    <ol class="what-next-list mb-0 ps-3">
+                        <li class="small mb-2">The seller has been notified and will prepare your order.</li>
+                        <li class="small mb-2">Track your order in <a href="{{ url_for('payment.history') }}" class="text-white fw-semibold">Payment History</a>.</li>
+                        <li class="small">Your order will arrive at the shipping address on file.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 justify-content-center mt-5">
+        <a href="{{ url_for('payment.history') }}" class="btn btn-outline-primary px-4 rounded-pill fw-semibold">
+            <i class="bi bi-clock-history me-2"></i>View Payment History
+        </a>
+        <a href="{{ url_for('main.catalog') }}" class="btn btn-primary px-5 rounded-pill fw-semibold">
+            <i class="bi bi-bag me-2"></i>Continue Shopping
+        </a>
+    </div>
+
+</div>
+{% endblock %}

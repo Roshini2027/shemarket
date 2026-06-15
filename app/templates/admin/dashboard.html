@@ -1,0 +1,188 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}<i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── Stat Cards ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    {% set cards = [
+        ("Total Users",            stats.total_users,      "primary",   "bi-people-fill",           url_for("admin.users_list")),
+        ("Customers",              stats.customers,        "info",      "bi-person-fill",            url_for("admin.users_list", role="customer")),
+        ("Sellers",                stats.sellers,          "success",   "bi-shop",                   url_for("admin.sellers_list")),
+        ("Verified Businesses",    stats.verified_biz,     "success",   "bi-patch-check-fill",       url_for("admin.sellers_list", status="verified")),
+        ("Pending Verifications",  stats.pending_verif,    "warning",   "bi-hourglass-split",        url_for("admin.verification_list")),
+        ("Total Products",         stats.total_products,   "primary",   "bi-box-seam-fill",          url_for("admin.products_list")),
+        ("Total Orders",           stats.total_orders,     "secondary", "bi-bag-check-fill",         url_for("admin.orders_list")),
+        ("Revenue",                "₹" ~ "%.2f"|format(stats.revenue|float), "success", "bi-cash-stack", url_for("admin.payments_list")),
+    ] %}
+    {% for label, value, color, icon, link in cards %}
+    <div class="col-6 col-md-3">
+        <a href="{{ link }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm rounded-4 p-3 admin-stat-card h-100">
+                <div class="d-flex align-items-start justify-content-between mb-2">
+                    <div class="admin-stat-icon bg-{{ color }}-soft rounded-3">
+                        <i class="bi {{ icon }} text-{{ color }}"></i>
+                    </div>
+                </div>
+                <div class="fw-bold fs-4 text-dark mb-0">{{ value }}</div>
+                <div class="text-secondary small">{{ label }}</div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row g-4">
+
+    <!-- ── Recent Orders ──────────────────────────────────────────── -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-0">
+                <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-bag-check me-2 text-primary"></i>Recent Orders</h6>
+                    <a href="{{ url_for('admin.orders_list') }}" class="btn btn-sm btn-outline-primary rounded-pill">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4 py-2 text-secondary small fw-semibold border-0">Order</th>
+                                <th class="py-2 text-secondary small fw-semibold border-0">Customer</th>
+                                <th class="py-2 text-secondary small fw-semibold border-0">Amount</th>
+                                <th class="pe-4 py-2 text-secondary small fw-semibold border-0">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            {% set oc, oi, ol = order.status_badge %}
+                            <tr>
+                                <td class="ps-4 py-2">
+                                    <span class="fw-semibold small">{{ order.order_number_display }}</span>
+                                    <div class="text-secondary" style="font-size:0.7rem;">{{ order.created_at.strftime("%d %b %Y") }}</div>
+                                </td>
+                                <td class="py-2 small">{{ order.user.full_name }}</td>
+                                <td class="py-2 fw-semibold small text-primary">₹{{ "%.2f"|format(order.total_amount|float) }}</td>
+                                <td class="pe-4 py-2">
+                                    <span class="badge bg-{{ oc }}-soft text-{{ oc }} rounded-pill px-2 small">{{ ol }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-secondary py-4 small">No orders yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Right column ───────────────────────────────────────────── -->
+    <div class="col-lg-5 d-flex flex-column gap-4">
+
+        <!-- Pending Verifications -->
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-patch-check me-2 text-warning"></i>Pending Verifications</h6>
+                    <a href="{{ url_for('admin.verification_list') }}" class="btn btn-sm btn-outline-warning rounded-pill">Review</a>
+                </div>
+                {% if pending_businesses %}
+                {% for biz in pending_businesses %}
+                <a href="{{ url_for('admin.verification_detail', business_id=biz.id) }}"
+                   class="d-flex align-items-center gap-3 py-2 text-decoration-none border-bottom admin-list-row">
+                    <img src="{{ biz.logo_url }}" alt="{{ biz.name }}"
+                         class="rounded-2 flex-shrink-0" style="width:36px;height:36px;object-fit:cover;">
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-semibold small text-dark text-truncate">{{ biz.name }}</div>
+                        <div class="text-secondary" style="font-size:0.7rem;">{{ biz.owner.email }}</div>
+                    </div>
+                    <span class="badge bg-warning-soft text-warning rounded-pill small flex-shrink-0">
+                        {{ biz.verification_documents|length }}/3 docs
+                    </span>
+                </a>
+                {% endfor %}
+                {% else %}
+                <p class="text-secondary small mb-0"><i class="bi bi-check-circle-fill text-success me-2"></i>No pending verifications.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Status Breakdown -->
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>Order Breakdown</h6>
+                {% set order_stats = [
+                    ("Pending",    order_breakdown.pending,    "warning"),
+                    ("Confirmed",  order_breakdown.confirmed,  "primary"),
+                    ("Shipped",    order_breakdown.shipped,    "info"),
+                    ("Delivered",  order_breakdown.delivered,  "success"),
+                    ("Cancelled",  order_breakdown.cancelled,  "danger"),
+                ] %}
+                {% for label, count, color in order_stats %}
+                {% set pct = ((count / stats.total_orders * 100) | round | int) if stats.total_orders else 0 %}
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-secondary small" style="min-width:72px;">{{ label }}</span>
+                    <div class="flex-grow-1 admin-progress-track rounded-pill">
+                        <div class="admin-progress-fill bg-{{ color }} rounded-pill" style="width:{{ pct }}%;"></div>
+                    </div>
+                    <span class="fw-semibold small text-{{ color }}" style="min-width:28px;text-align:right;">{{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Recent Users ────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card-body p-0">
+        <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3">
+            <h6 class="fw-bold mb-0"><i class="bi bi-person-plus me-2 text-info"></i>Recently Joined Users</h6>
+            <a href="{{ url_for('admin.users_list') }}" class="btn btn-sm btn-outline-primary rounded-pill">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-2 text-secondary small fw-semibold border-0">User</th>
+                        <th class="py-2 text-secondary small fw-semibold border-0">Role</th>
+                        <th class="py-2 text-secondary small fw-semibold border-0">Status</th>
+                        <th class="pe-4 py-2 text-secondary small fw-semibold border-0">Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr>
+                        <td class="ps-4 py-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="admin-user-avatar admin-user-avatar--sm">{{ user.full_name[0].upper() }}</div>
+                                <div>
+                                    <div class="fw-semibold small">{{ user.full_name }}</div>
+                                    <div class="text-secondary" style="font-size:0.7rem;">{{ user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-2">
+                            <span class="badge rounded-pill
+                                {% if user.role.value == 'admin' %}bg-danger
+                                {% elif user.role.value == 'business_owner' %}bg-success
+                                {% else %}bg-primary{% endif %}
+                                small">{{ user.role.value.replace('_',' ').title() }}</span>
+                        </td>
+                        <td class="py-2">
+                            <span class="badge rounded-pill {{ 'bg-success-soft text-success' if user.status.value == 'active' else 'bg-danger-soft text-danger' }} small">
+                                {{ user.status.value.title() }}
+                            </span>
+                        </td>
+                        <td class="pe-4 py-2 text-secondary small">{{ user.created_at.strftime("%d %b %Y") }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

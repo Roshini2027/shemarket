@@ -1,0 +1,22 @@
+{# _rec_section.html — args: title, icon, products, view_all_url, badge_class #}
+{% if products %}
+<section class="py-4">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold mb-0"><i class="bi {{ icon }} text-primary me-2"></i>{{ title }}</h5>
+            </div>
+            {% if view_all_url %}
+            <a href="{{ view_all_url }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+            {% endif %}
+        </div>
+        <div class="row g-3">
+            {% for product in products[:4] %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}

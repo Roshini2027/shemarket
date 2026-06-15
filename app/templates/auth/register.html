@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Create Account — SheMarket{% endblock %}
+
+{% block content %}
+<section class="auth-section d-flex align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6">
+
+                <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-bag-heart-fill text-primary fs-1"></i>
+                        <h2 class="fw-bold mt-2">Create your account</h2>
+                        <p class="text-secondary small">Join the SheMarket community</p>
+                    </div>
+
+                    <!-- Role Selector Cards -->
+                    <div class="row g-3 mb-4" id="roleSelector">
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="role_toggle" id="roleCustomer" value="customer" checked>
+                            <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="roleCustomer">
+                                <i class="bi bi-person-fill d-block fs-3 mb-1"></i>
+                                <span class="fw-semibold">Shop</span>
+                                <div class="small text-secondary mt-1">Browse &amp; buy</div>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="role_toggle" id="roleSeller" value="seller">
+                            <label class="btn btn-outline-primary w-100 py-3 rounded-3" for="roleSeller">
+                                <i class="bi bi-shop d-block fs-3 mb-1"></i>
+                                <span class="fw-semibold">Sell</span>
+                                <div class="small text-secondary mt-1">List your business</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <form id="registerForm" method="POST" action="{{ url_for('auth.register') }}" novalidate>
+                        <!-- Hidden role field synced with radio buttons -->
+                        <input type="hidden" name="role" id="roleField" value="{{ form_data.get('role', 'customer') }}">
+
+                        <!-- Full Name -->
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label fw-semibold">Full name</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-person text-secondary"></i>
+                                </span>
+                                <input type="text" id="full_name" name="full_name"
+                                    class="form-control border-start-0 ps-0"
+                                    placeholder="Your full name"
+                                    value="{{ form_data.get('full_name', '') }}"
+                                    required minlength="2" maxlength="100" autocomplete="name">
+                                <div class="invalid-feedback">Please enter your full name (at least 2 characters).</div>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-semibold">Email address</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-envelope text-secondary"></i>
+                                </span>
+                                <input type="email" id="email" name="email"
+                                    class="form-control border-start-0 ps-0"
+                                    placeholder="you@example.com"
+                                    value="{{ form_data.get('email', '') }}"
+                                    required autocomplete="email">
+                                <div class="invalid-feedback">Please enter a valid email address.</div>
+                            </div>
+                        </div>
+
+                        <!-- Phone (optional) -->
+                        <div class="mb-3">
+                            <label for="phone" class="form-label fw-semibold">
+                                Phone number <span class="text-secondary fw-normal small">(optional)</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-telephone text-secondary"></i>
+                                </span>
+                                <input type="tel" id="phone" name="phone"
+                                    class="form-control border-start-0 ps-0"
+                                    placeholder="+1 234 567 8900"
+                                    value="{{ form_data.get('phone', '') }}"
+                                    pattern="^\+?[\d\s\-\(\)]{7,20}$"
+                                    autocomplete="tel">
+                                <div class="invalid-feedback">Enter a valid phone number.</div>
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-semibold">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-lock text-secondary"></i>
+                                </span>
+                                <input type="password" id="password" name="password"
+                                    class="form-control border-start-0 border-end-0 ps-0"
+                                    placeholder="Min. 8 characters"
+                                    required minlength="8" autocomplete="new-password">
+                                <button type="button" class="input-group-text bg-light border-start-0"
+                                    id="togglePassword" title="Show/hide password">
+                                    <i class="bi bi-eye text-secondary" id="toggleIcon"></i>
+                                </button>
+                                <div class="invalid-feedback">Password must be at least 8 characters.</div>
+                            </div>
+                            <!-- Strength bar -->
+                            <div class="progress mt-2" style="height:4px;">
+                                <div id="strengthBar" class="progress-bar" role="progressbar" style="width:0%"></div>
+                            </div>
+                            <div id="strengthLabel" class="small mt-1 text-secondary"></div>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label fw-semibold">Confirm password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="bi bi-lock-fill text-secondary"></i>
+                                </span>
+                                <input type="password" id="confirm_password" name="confirm_password"
+                                    class="form-control border-start-0 ps-0"
+                                    placeholder="Repeat your password"
+                                    required autocomplete="new-password">
+                                <div class="invalid-feedback" id="confirmFeedback">Passwords do not match.</div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
+                            <i class="bi bi-person-plus me-2"></i>Create Account
+                        </button>
+                    </form>
+
+                    <hr class="my-4">
+                    <p class="text-center text-secondary small mb-0">
+                        Already have an account?
+                        <a href="{{ url_for('auth.login') }}" class="text-primary fw-semibold text-decoration-none">Log in</a>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Sync role radio → hidden field
+    document.querySelectorAll("input[name='role_toggle']").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+            document.getElementById("roleField").value = this.value;
+        });
+        // Pre-select from server-side value on validation errors
+        if (radio.value === document.getElementById("roleField").value) {
+            radio.checked = true;
+        }
+    });
+
+    // Password show/hide toggle
+    document.getElementById("togglePassword").addEventListener("click", function () {
+        const input = document.getElementById("password");
+        const icon = document.getElementById("toggleIcon");
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        icon.className = isHidden ? "bi bi-eye-slash text-secondary" : "bi bi-eye text-secondary";
+    });
+
+    // Password strength meter
+    document.getElementById("password").addEventListener("input", function () {
+        const val = this.value;
+        const bar = document.getElementById("strengthBar");
+        const label = document.getElementById("strengthLabel");
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+
+        const levels = [
+            { pct: 0,   cls: "",               text: "" },
+            { pct: 25,  cls: "bg-danger",      text: "Weak" },
+            { pct: 50,  cls: "bg-warning",     text: "Fair" },
+            { pct: 75,  cls: "bg-info",        text: "Good" },
+            { pct: 100, cls: "bg-success",     text: "Strong" },
+        ];
+        const level = levels[score];
+        bar.style.width = level.pct + "%";
+        bar.className = "progress-bar " + level.cls;
+        label.textContent = level.text;
+        label.className = "small mt-1 " + (level.cls.replace("bg-", "text-") || "text-secondary");
+    });
+
+    // Confirm password match check
+    function checkPasswordMatch() {
+        const pw = document.getElementById("password").value;
+        const cpw = document.getElementById("confirm_password");
+        if (cpw.value && pw !== cpw.value) {
+            cpw.setCustomValidity("Passwords do not match.");
+        } else {
+            cpw.setCustomValidity("");
+        }
+    }
+    document.getElementById("password").addEventListener("input", checkPasswordMatch);
+    document.getElementById("confirm_password").addEventListener("input", checkPasswordMatch);
+
+    // Form submit validation
+    document.getElementById("registerForm").addEventListener("submit", function (e) {
+        checkPasswordMatch();
+        if (!this.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        this.classList.add("was-validated");
+    });
+</script>
+{% endblock %}

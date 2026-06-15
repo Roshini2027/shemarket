@@ -1,0 +1,132 @@
+<div class="filter-sidebar-card">
+    <div class="filter-sidebar-header">
+        <i class="bi bi-sliders2 me-2"></i>Search & Filters
+    </div>
+    <div class="filter-sidebar-body">
+
+    <form method="GET" action="{{ url_for('main.catalog') }}" id="filterForm" autocomplete="off">
+        <input type="hidden" name="sort" value="{{ sort }}">
+
+        <!-- ── Keyword Search ──────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-search me-1"></i>Product Search</label>
+            <div class="position-relative">
+                <input type="text" name="q" id="searchInput" class="form-control form-control-sm rounded-3"
+                       placeholder="Product name or category…"
+                       value="{{ q }}"
+                       data-suggestions-url="{{ url_for('main.search_suggestions') }}">
+                <div id="suggestionsBox" class="suggestions-dropdown d-none"></div>
+            </div>
+        </div>
+
+        <!-- ── Seller Search ───────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-shop me-1"></i>Seller Name</label>
+            <div class="position-relative">
+                <input type="text" name="seller" id="sellerInput" class="form-control form-control-sm rounded-3"
+                       placeholder="Search sellers…" value="{{ seller_q }}"
+                       data-suggestions-url="{{ url_for('main.search_suggestions') }}">
+                <div id="sellerSuggestionsBox" class="suggestions-dropdown d-none"></div>
+            </div>
+        </div>
+
+        <!-- ── Women-Owned Only ────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-patch-check me-1"></i>Business Type</label>
+            <label class="verified-toggle-label d-flex align-items-center gap-2 {{ 'verified-toggle-label--on' if verified == '1' }}">
+                <input type="checkbox" name="verified" value="1" id="verifiedCheck"
+                       class="form-check-input mt-0" {{ "checked" if verified == "1" }}>
+                <span class="verified-badge" style="font-size:0.65rem;padding:2px 8px;">
+                    <i class="bi bi-patch-check-fill"></i> Women-Owned Only
+                </span>
+            </label>
+        </div>
+
+        <!-- ── Category ────────────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-tag me-1"></i>Category</label>
+            <input type="hidden" name="category" id="categoryField" value="{{ category }}">
+            <div class="d-flex flex-column gap-1" id="categoryList">
+                <button type="button"
+                        class="cat-filter-link small text-start border-0 bg-transparent {{ 'active' if not category }}"
+                        data-cat="">All Categories</button>
+                {% for cat in categories %}
+                <button type="button"
+                        class="cat-filter-link small text-start border-0 bg-transparent {{ 'active' if category == cat }}"
+                        data-cat="{{ cat }}">{{ cat }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ── Price Range ──────────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-currency-rupee me-1"></i>Price Range</label>
+            <div class="price-range-wrap position-relative mb-3">
+                <div class="price-track rounded-pill"></div>
+                <div class="price-fill rounded-pill" id="priceFill"></div>
+                <input type="range" class="price-thumb" id="priceMin"
+                       min="{{ price_floor }}" max="{{ price_ceil }}"
+                       value="{{ price_min if price_min else price_floor }}"
+                       step="1">
+                <input type="range" class="price-thumb" id="priceMax"
+                       min="{{ price_floor }}" max="{{ price_ceil }}"
+                       value="{{ price_max if price_max else price_ceil }}"
+                       step="1">
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 px-2">₹</span>
+                    <input type="number" name="price_min" id="priceMinInput"
+                           class="form-control border-start-0 px-1 text-center"
+                           min="{{ price_floor }}" max="{{ price_ceil }}"
+                           value="{{ price_min }}" placeholder="{{ price_floor }}">
+                </div>
+                <span class="text-secondary">–</span>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 px-2">₹</span>
+                    <input type="number" name="price_max" id="priceMaxInput"
+                           class="form-control border-start-0 px-1 text-center"
+                           min="{{ price_floor }}" max="{{ price_ceil }}"
+                           value="{{ price_max }}" placeholder="{{ price_ceil }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Minimum Rating ───────────────────────────────────────── -->
+        <div class="filter-section">
+            <label class="filter-label"><i class="bi bi-star me-1"></i>Minimum Rating</label>
+            <input type="hidden" name="rating" id="ratingField" value="{{ rating_min }}">
+            <div class="d-flex flex-column gap-1" id="ratingList">
+                {% for r in [4, 3, 2, 1] %}
+                <button type="button"
+                        class="rating-filter-btn text-start border-0 bg-transparent p-1 rounded-3 d-flex align-items-center gap-2
+                               {{ 'active' if rating_min == r | string }}"
+                        data-rating="{{ r }}">
+                    {% for i in range(1, 6) %}
+                    <i class="bi {{ 'bi-star-fill' if i <= r else 'bi-star' }} star-icon {{ 'filled' if i <= r }}"></i>
+                    {% endfor %}
+                    <span class="small text-secondary ms-1">& up</span>
+                </button>
+                {% endfor %}
+                <button type="button"
+                        class="rating-filter-btn text-start border-0 bg-transparent p-1 rounded-3 small text-secondary
+                               {{ 'active' if not rating_min }}"
+                        data-rating="">Any Rating</button>
+            </div>
+        </div>
+
+        <!-- Apply / Clear -->
+        <button type="submit" class="btn btn-primary w-100 rounded-3 fw-semibold btn-sm">
+            <i class="bi bi-funnel me-2"></i>Apply Filters
+        </button>
+
+        {% if active_filters %}
+        <a href="{{ url_for('main.catalog') }}"
+           class="btn btn-outline-secondary btn-sm w-100 mt-2 rounded-3">
+            <i class="bi bi-x-circle me-1"></i>Clear All
+        </a>
+        {% endif %}
+
+    </form>
+    </div><!-- /filter-sidebar-body -->
+</div><!-- /filter-sidebar-card -->

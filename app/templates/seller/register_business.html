@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit Business" if edit_mode else "Register Your Business" }} — SheMarket{% endblock %}
+
+{% block content %}
+<section class="seller-reg-section py-5">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-8 text-center">
+                <span class="badge bg-purple-soft text-primary fw-semibold px-3 py-2 rounded-pill mb-3">
+                    <i class="bi bi-shop me-1"></i>Seller Portal
+                </span>
+                <h2 class="fw-bold">{{ "Update Your Business" if edit_mode else "Register Your Business" }}</h2>
+                <p class="text-secondary">
+                    {{ "Update your business details below." if edit_mode else
+                       "Fill in your business details. Our team will verify your listing within 2–3 business days." }}
+                </p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <form id="bizForm"
+                      method="POST"
+                      enctype="multipart/form-data"
+                      action="{{ url_for('seller.edit_business') if edit_mode else url_for('seller.register_business') }}"
+                      novalidate>
+
+                    <!-- ── Logo Upload ─────────────────────────────────── -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-image text-primary me-2"></i>Business Logo</h6>
+                            <div class="d-flex align-items-center gap-4 flex-wrap">
+                                <div class="logo-preview-wrap">
+                                    <img id="logoPreview"
+                                         src="{{ business.logo_url if edit_mode and business.logo else url_for('static', filename='img/default_logo.png') }}"
+                                         alt="Logo preview"
+                                         class="logo-preview rounded-3">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <label for="logo" class="form-label fw-semibold">Upload logo</label>
+                                    <input type="file" id="logo" name="logo"
+                                           class="form-control" accept="image/png,image/jpeg,image/webp"
+                                           aria-describedby="logoHint">
+                                    <div id="logoHint" class="form-text">PNG, JPG or WEBP · Max 5 MB · Recommended 400×400 px</div>
+                                    <div class="invalid-feedback" id="logoError"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Business Info ───────────────────────────────── -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Business Information</h6>
+                            <div class="row g-3">
+
+                                <!-- Name -->
+                                <div class="col-12">
+                                    <label for="name" class="form-label fw-semibold">
+                                        Business Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="name" name="name"
+                                           class="form-control"
+                                           placeholder="e.g. Amira's Boutique"
+                                           value="{{ business.name if edit_mode else form_data.get('name', '') }}"
+                                           required minlength="2" maxlength="150">
+                                    <div class="invalid-feedback">Business name is required (2–150 characters).</div>
+                                </div>
+
+                                <!-- Category -->
+                                <div class="col-md-6">
+                                    <label for="category" class="form-label fw-semibold">
+                                        Category <span class="text-danger">*</span>
+                                    </label>
+                                    <select id="category" name="category" class="form-select" required>
+                                        <option value="" disabled
+                                            {{ "selected" if not (edit_mode or form_data.get("category")) }}>
+                                            Select a category…
+                                        </option>
+                                        {% for cat in categories %}
+                                        <option value="{{ cat }}"
+                                            {{ "selected" if (edit_mode and business.category == cat)
+                                                          or form_data.get("category") == cat }}>
+                                            {{ cat }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Please select a category.</div>
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-md-6">
+                                    <label for="address" class="form-label fw-semibold">Address</label>
+                                    <input type="text" id="address" name="address"
+                                           class="form-control"
+                                           placeholder="Street, City, Country"
+                                           value="{{ business.address if edit_mode else form_data.get('address', '') }}">
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-12">
+                                    <label for="description" class="form-label fw-semibold">
+                                        Description <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea id="description" name="description"
+                                              class="form-control" rows="4"
+                                              placeholder="Tell customers about your business, what you sell, and what makes you unique…"
+                                              required minlength="20" maxlength="1000">{{ business.description if edit_mode else form_data.get('description', '') }}</textarea>
+                                    <div class="d-flex justify-content-between">
+                                        <div class="invalid-feedback">Description must be at least 20 characters.</div>
+                                        <small class="text-secondary mt-1" id="descCount">0 / 1000</small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Contact Details ─────────────────────────────── -->
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-1"><i class="bi bi-telephone text-primary me-2"></i>Contact Details</h6>
+                            <p class="text-secondary small mb-3">Provide at least one contact method.</p>
+                            <div class="row g-3">
+
+                                <!-- Contact Phone -->
+                                <div class="col-md-6">
+                                    <label for="contact_phone" class="form-label fw-semibold">Business Phone</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0">
+                                            <i class="bi bi-telephone text-secondary"></i>
+                                        </span>
+                                        <input type="tel" id="contact_phone" name="contact_phone"
+                                               class="form-control border-start-0 ps-0"
+                                               placeholder="+1 234 567 8900"
+                                               pattern="^\+?[\d\s\-\(\)]{7,20}$"
+                                               value="{{ business.contact_phone if edit_mode else form_data.get('contact_phone', '') }}">
+                                        <div class="invalid-feedback">Enter a valid phone number.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Email -->
+                                <div class="col-md-6">
+                                    <label for="contact_email" class="form-label fw-semibold">Business Email</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0">
+                                            <i class="bi bi-envelope text-secondary"></i>
+                                        </span>
+                                        <input type="email" id="contact_email" name="contact_email"
+                                               class="form-control border-start-0 ps-0"
+                                               placeholder="business@example.com"
+                                               value="{{ business.contact_email if edit_mode else form_data.get('contact_email', '') }}">
+                                        <div class="invalid-feedback">Enter a valid email address.</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Submit ──────────────────────────────────────── -->
+                    <div class="d-flex gap-3 justify-content-end">
+                        {% if edit_mode %}
+                        <a href="{{ url_for('seller.dashboard') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary px-5 fw-semibold" id="submitBtn">
+                            <span id="submitSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status"></span>
+                            <i class="bi bi-{{ 'check2-circle' if edit_mode else 'send' }} me-2" id="submitIcon"></i>
+                            {{ "Save Changes" if edit_mode else "Submit for Verification" }}
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Logo preview ────────────────────────────────────────────────────
+document.getElementById("logo").addEventListener("change", function () {
+    const file = this.files[0];
+    const preview = document.getElementById("logoPreview");
+    const errorEl = document.getElementById("logoError");
+    const allowed = ["image/png", "image/jpeg", "image/webp"];
+    const maxBytes = 5 * 1024 * 1024;
+
+    errorEl.textContent = "";
+    this.classList.remove("is-invalid");
+
+    if (!file) return;
+
+    if (!allowed.includes(file.type)) {
+        this.classList.add("is-invalid");
+        errorEl.textContent = "Only PNG, JPG, or WEBP files are allowed.";
+        return;
+    }
+    if (file.size > maxBytes) {
+        this.classList.add("is-invalid");
+        errorEl.textContent = "File size must be under 5 MB.";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = e => { preview.src = e.target.result; };
+    reader.readAsDataURL(file);
+});
+
+// ── Description counter ─────────────────────────────────────────────
+const descEl = document.getElementById("description");
+const countEl = document.getElementById("descCount");
+function updateCount() {
+    const len = descEl.value.length;
+    countEl.textContent = `${len} / 1000`;
+    countEl.className = len > 950 ? "text-danger mt-1 small" : "text-secondary mt-1 small";
+}
+descEl.addEventListener("input", updateCount);
+updateCount();
+
+// ── At-least-one contact validation ────────────────────────────────
+function validateContact() {
+    const phone = document.getElementById("contact_phone");
+    const email = document.getElementById("contact_email");
+    if (!phone.value.trim() && !email.value.trim()) {
+        phone.setCustomValidity("Provide at least one contact method.");
+        email.setCustomValidity("Provide at least one contact method.");
+        return false;
+    } else {
+        phone.setCustomValidity("");
+        email.setCustomValidity("");
+        return true;
+    }
+}
+document.getElementById("contact_phone").addEventListener("input", validateContact);
+document.getElementById("contact_email").addEventListener("input", validateContact);
+
+// ── Form submit ─────────────────────────────────────────────────────
+document.getElementById("bizForm").addEventListener("submit", function (e) {
+    validateContact();
+    if (!this.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add("was-validated");
+        // Scroll to first error
+        const firstInvalid = this.querySelector(":invalid");
+        if (firstInvalid) firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+    }
+    this.classList.add("was-validated");
+    // Show spinner
+    document.getElementById("submitSpinner").classList.remove("d-none");
+    document.getElementById("submitIcon").classList.add("d-none");
+    document.getElementById("submitBtn").disabled = true;
+});
+</script>
+{% endblock %}

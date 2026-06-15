@@ -1,0 +1,178 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Review: {{ business.name }}{% endblock %}
+{% block page_title %}<i class="bi bi-patch-check me-2 text-primary"></i>Verification Detail{% endblock %}
+
+{% block content %}
+{% set badge_color, badge_label = business.status_badge %}
+<div>
+
+        <!-- Back -->
+        <a href="{{ url_for('admin.verification_list') }}" class="text-secondary text-decoration-none small d-inline-flex align-items-center gap-1 mb-4">
+            <i class="bi bi-arrow-left"></i> Back to Queue
+        </a>
+
+        <!-- Header -->
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+            <div class="d-flex align-items-center gap-3">
+                <img src="{{ business.logo_url }}" alt="{{ business.name }}"
+                     class="rounded-3" style="width:64px;height:64px;object-fit:cover;">
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h2 class="fw-bold mb-0">{{ business.name }}</h2>
+                        <span class="badge bg-{{ badge_color }} rounded-pill">{{ badge_label }}</span>
+                        {% if business.is_verified %}
+                        <span class="verified-badge"><i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-secondary small mt-1">
+                        {{ business.category }} &bull; {{ business.owner.full_name }} &bull; {{ business.owner.email }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ── Documents ───────────────────────────────────────── -->
+            <div class="col-lg-8">
+                <h5 class="fw-bold mb-3">Submitted Documents</h5>
+
+                {% for doc_type, label, hint in required_docs %}
+                {% set doc = docs_map.get(doc_type) %}
+                {% if doc %}{% set dc, dl = doc.status_badge %}{% endif %}
+
+                <div class="card border-0 shadow-sm rounded-4 mb-3">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <div class="fw-semibold">{{ label }}</div>
+                                <div class="text-secondary small">{{ hint }}</div>
+                            </div>
+                            {% if doc %}
+                            <span class="badge bg-{{ dc }} rounded-pill">{{ dl }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">Not Uploaded</span>
+                            {% endif %}
+                        </div>
+
+                        {% if doc %}
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            {% if doc.is_image %}
+                            <a href="{{ doc.file_path }}" target="_blank" class="doc-viewer-link">
+                                <img src="{{ doc.file_path }}" alt="{{ label }}"
+                                     class="doc-admin-preview rounded-3">
+                            </a>
+                            {% else %}
+                            <a href="{{ doc.file_path }}" target="_blank"
+                               class="btn btn-outline-danger btn-sm rounded-3">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>View PDF
+                            </a>
+                            {% endif %}
+                            <div>
+                                <div class="small fw-semibold">{{ doc.original_filename or doc.file_url }}</div>
+                                <div class="text-secondary" style="font-size:0.75rem;">
+                                    Uploaded {{ doc.uploaded_at.strftime("%b %d, %Y at %H:%M") }}
+                                </div>
+                                {% if doc.reviewer %}
+                                <div class="text-secondary" style="font-size:0.75rem;">
+                                    Reviewed by {{ doc.reviewer.full_name }} on {{ doc.reviewed_at.strftime("%b %d, %Y") }}
+                                </div>
+                                {% endif %}
+                                {% if doc.rejection_comment %}
+                                <div class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>{{ doc.rejection_comment }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% else %}
+                        <div class="text-secondary small fst-italic">
+                            <i class="bi bi-dash-circle me-1"></i>Not yet uploaded by the seller.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- ── Decision Panel ──────────────────────────────────── -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 80px;">
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold mb-1">Make a Decision</h5>
+                        <p class="text-secondary small mb-3">
+                            {{ business.verification_documents | length }} of 3 documents uploaded.
+                            {% if business.docs_complete() %}
+                            <span class="text-success fw-semibold">All required docs present.</span>
+                            {% else %}
+                            <span class="text-warning fw-semibold">Missing documents.</span>
+                            {% endif %}
+                        </p>
+
+                        <!-- Business info summary -->
+                        <ul class="list-unstyled small text-secondary mb-4">
+                            {% if business.address %}
+                            <li class="mb-1"><i class="bi bi-geo-alt me-2 text-primary"></i>{{ business.address }}</li>
+                            {% endif %}
+                            {% if business.contact_phone %}
+                            <li class="mb-1"><i class="bi bi-telephone me-2 text-primary"></i>{{ business.contact_phone }}</li>
+                            {% endif %}
+                            {% if business.contact_email %}
+                            <li class="mb-1"><i class="bi bi-envelope me-2 text-primary"></i>{{ business.contact_email }}</li>
+                            {% endif %}
+                            <li><i class="bi bi-calendar me-2 text-primary"></i>Applied {{ business.created_at.strftime("%b %d, %Y") }}</li>
+                        </ul>
+
+                        {% if business.status.value not in ('verified',) %}
+                        <!-- Approve -->
+                        <form method="POST" action="{{ url_for('admin.approve_business', business_id=business.id) }}"
+                              onsubmit="return confirm('Approve and verify this business?')">
+                            <button type="submit"
+                                    class="btn btn-success w-100 fw-semibold mb-3"
+                                    {{ 'disabled' if not business.docs_complete() }}>
+                                <i class="bi bi-patch-check-fill me-2"></i>Approve Verification
+                            </button>
+                        </form>
+                        {% if not business.docs_complete() %}
+                        <p class="text-warning small mb-3">
+                            <i class="bi bi-exclamation-triangle me-1"></i>All 3 documents must be uploaded before approving.
+                        </p>
+                        {% endif %}
+                        {% else %}
+                        <div class="alert alert-success rounded-3 small py-2 mb-3">
+                            <i class="bi bi-patch-check-fill me-1"></i>
+                            <strong>Verified</strong> on {{ business.verified_at.strftime("%b %d, %Y") }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Reject -->
+                        {% if business.status.value != 'rejected' %}
+                        <button class="btn btn-outline-danger w-100" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#rejectForm">
+                            <i class="bi bi-x-circle me-2"></i>Reject Verification
+                        </button>
+                        {% endif %}
+
+                        <div class="collapse mt-3" id="rejectForm">
+                            <form method="POST" action="{{ url_for('admin.reject_business', business_id=business.id) }}"
+                                  onsubmit="return document.getElementById('rejComment').value.trim() !== '' || (alert('Comment is required.'), false)">
+                                <label for="rejComment" class="form-label fw-semibold small">Rejection Reason <span class="text-danger">*</span></label>
+                                <textarea id="rejComment" name="rejection_comment"
+                                          class="form-control form-control-sm mb-2" rows="3"
+                                          placeholder="Explain why the application is being rejected…"
+                                          required>{{ business.rejection_comment or '' }}</textarea>
+                                <button type="submit" class="btn btn-danger w-100 btn-sm fw-semibold">
+                                    Confirm Rejection
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+</div>
+{% endblock %}

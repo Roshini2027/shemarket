@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}Payment — Order #{{ "%05d" | format(order.id) }} — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:1060px;">
+
+    <!-- Progress -->
+    <div class="checkout-progress d-flex align-items-center justify-content-center gap-0 mb-5">
+        <div class="checkout-step done">
+            <div class="checkout-step-circle"><i class="bi bi-cart3"></i></div>
+            <div class="checkout-step-label">Cart</div>
+        </div>
+        <div class="checkout-step-line done"></div>
+        <div class="checkout-step done">
+            <div class="checkout-step-circle"><i class="bi bi-truck"></i></div>
+            <div class="checkout-step-label">Shipping</div>
+        </div>
+        <div class="checkout-step-line done"></div>
+        <div class="checkout-step active">
+            <div class="checkout-step-circle"><i class="bi bi-credit-card-2-front"></i></div>
+            <div class="checkout-step-label">Payment</div>
+        </div>
+        <div class="checkout-step-line"></div>
+        <div class="checkout-step">
+            <div class="checkout-step-circle"><i class="bi bi-check-lg"></i></div>
+            <div class="checkout-step-label">Done</div>
+        </div>
+    </div>
+
+    <div class="row g-4 align-items-start">
+
+        <!-- ══════════════════════════════════════════════════════════
+             LEFT — Payment form
+        ══════════════════════════════════════════════════════════ -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+
+                    <h6 class="fw-bold mb-4">
+                        <i class="bi bi-credit-card-2-front-fill text-primary me-2"></i>
+                        Choose Payment Method
+                    </h6>
+
+                    <!-- Method tabs -->
+                    <div class="pay-tab-bar d-flex gap-2 flex-wrap mb-4" id="payTabs">
+                        {% set tab_methods = [
+                            ("credit_card", "bi-credit-card-fill",  "Credit Card"),
+                            ("debit_card",  "bi-credit-card-2-back-fill", "Debit Card"),
+                            ("upi",         "bi-phone-fill",         "UPI"),
+                            ("net_banking", "bi-bank2",              "Net Banking"),
+                            ("wallet",      "bi-wallet2",            "Wallet"),
+                        ] %}
+                        {% for val, icon, label in tab_methods %}
+                        <button type="button"
+                                class="pay-tab-btn btn btn-sm rounded-pill {{ 'active' if loop.first }}"
+                                data-method="{{ val }}">
+                            <i class="bi {{ icon }} me-1"></i>{{ label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <form method="POST"
+                          action="{{ url_for('payment.process', order_id=order.id) }}"
+                          id="paymentForm" novalidate>
+
+                        <input type="hidden" name="payment_method" id="paymentMethodInput" value="credit_card">
+
+                        <!-- ── Credit Card ──────────────────────────── -->
+                        <div class="pay-panel" id="panel-credit_card">
+                            <div class="pay-card-visual mb-4" id="cardVisual">
+                                <div class="pay-card-chip"></div>
+                                <div class="pay-card-number" id="cardNumberDisplay">•••• •••• •••• ••••</div>
+                                <div class="d-flex justify-content-between align-items-end mt-3">
+                                    <div>
+                                        <div class="pay-card-label">Card Holder</div>
+                                        <div class="pay-card-value" id="cardNameDisplay">YOUR NAME</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="pay-card-label">Expires</div>
+                                        <div class="pay-card-value" id="cardExpiryDisplay">MM/YY</div>
+                                    </div>
+                                    <div class="pay-card-network" id="cardNetwork">
+                                        <i class="bi bi-credit-card fs-4 opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            {% include "payment/_card_fields.html" with context %}
+                        </div>
+
+                        <!-- ── Debit Card ───────────────────────────── -->
+                        <div class="pay-panel d-none" id="panel-debit_card">
+                            <div class="pay-card-visual pay-card-visual--debit mb-4">
+                                <div class="pay-card-chip"></div>
+                                <div class="pay-card-number">•••• •••• •••• ••••</div>
+                                <div class="d-flex justify-content-between align-items-end mt-3">
+                                    <div>
+                                        <div class="pay-card-label">Card Holder</div>
+                                        <div class="pay-card-value">YOUR NAME</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="pay-card-label">Expires</div>
+                                        <div class="pay-card-value">MM/YY</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% include "payment/_card_fields.html" with context %}
+                            <div class="row g-3 mt-0">
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">ATM / Debit PIN <span class="text-danger">*</span></label>
+                                    <input type="password" name="atm_pin" class="form-control rounded-3"
+                                           placeholder="4 or 6-digit PIN" maxlength="6" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── UPI ──────────────────────────────────── -->
+                        <div class="pay-panel d-none" id="panel-upi">
+                            <div class="text-center py-3 mb-4">
+                                <div class="upi-logo-wrap mx-auto mb-3">
+                                    <i class="bi bi-phone-fill text-primary fs-1"></i>
+                                </div>
+                                <p class="text-secondary small mb-0">Pay directly using your UPI app</p>
+                                <div class="d-flex justify-content-center gap-3 mt-3 flex-wrap">
+                                    {% for app in ["GPay", "PhonePe", "Paytm", "BHIM", "Amazon Pay"] %}
+                                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 small fw-semibold">{{ app }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <label class="form-label small fw-semibold">UPI ID <span class="text-danger">*</span></label>
+                            <div class="input-group rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-purple-soft border-end-0">
+                                    <i class="bi bi-at text-primary"></i>
+                                </span>
+                                <input type="text" name="upi_id" class="form-control border-start-0"
+                                       placeholder="yourname@upi" autocomplete="off">
+                            </div>
+                            <div class="text-secondary small mt-2">
+                                <i class="bi bi-info-circle me-1"></i>
+                                After clicking Pay, open your UPI app to approve the request.
+                            </div>
+                        </div>
+
+                        <!-- ── Net Banking ──────────────────────────── -->
+                        <div class="pay-panel d-none" id="panel-net_banking">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">Select Bank <span class="text-danger">*</span></label>
+                                    <select name="bank_code" class="form-select rounded-3">
+                                        <option value="">-- Choose your bank --</option>
+                                        {% for code, name in banks %}
+                                        <option value="{{ code }}">{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">Net Banking User ID <span class="text-danger">*</span></label>
+                                    <input type="text" name="net_user_id" class="form-control rounded-3"
+                                           placeholder="Your online banking username" autocomplete="off">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">Password <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="password" name="net_password" id="netPassword"
+                                               class="form-control rounded-3 rounded-end-0"
+                                               placeholder="Net banking password" autocomplete="off">
+                                        <button type="button" class="btn btn-outline-secondary toggle-pwd"
+                                                data-target="netPassword">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning-soft border border-warning rounded-3 mt-3 small">
+                                <i class="bi bi-shield-lock-fill text-warning me-1"></i>
+                                This is a <strong>simulated</strong> environment. Never enter real banking credentials.
+                            </div>
+                        </div>
+
+                        <!-- ── Wallet ───────────────────────────────── -->
+                        <div class="pay-panel d-none" id="panel-wallet">
+                            <div class="text-center py-3 mb-4">
+                                <div class="upi-logo-wrap mx-auto mb-3">
+                                    <i class="bi bi-wallet2 text-primary fs-1"></i>
+                                </div>
+                                <p class="text-secondary small mb-0">Pay using your mobile wallet balance</p>
+                                <div class="d-flex justify-content-center gap-3 mt-3 flex-wrap">
+                                    {% for w in ["Paytm", "MobiKwik", "Freecharge", "Airtel Money", "JioMoney"] %}
+                                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 small fw-semibold">{{ w }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <label class="form-label small fw-semibold">Registered Mobile Number <span class="text-danger">*</span></label>
+                            <div class="input-group rounded-3 overflow-hidden">
+                                <span class="input-group-text bg-purple-soft border-end-0">
+                                    <i class="bi bi-phone text-primary"></i>
+                                </span>
+                                <input type="tel" name="wallet_mobile" class="form-control border-start-0"
+                                       placeholder="+91 98765 43210"
+                                       value="{{ current_user.phone or '' }}">
+                            </div>
+                        </div>
+
+                        <!-- Pay button -->
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary w-100 rounded-3 fw-bold py-2 fs-6"
+                                    id="payBtn">
+                                <i class="bi bi-lock-fill me-2"></i>
+                                Pay ₹{{ "%.2f" | format(order.total_amount | float) }} Securely
+                            </button>
+                            <div class="d-flex align-items-center justify-content-center gap-3 mt-3 text-secondary small">
+                                <span><i class="bi bi-shield-check text-success me-1"></i>256-bit SSL</span>
+                                <span><i class="bi bi-lock text-primary me-1"></i>Encrypted</span>
+                                <span><i class="bi bi-patch-check text-success me-1"></i>Secure Gateway</span>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             RIGHT — Order Summary
+        ══════════════════════════════════════════════════════════ -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 checkout-summary-sticky">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-receipt text-primary me-2"></i>Order Summary
+                        <span class="badge bg-primary rounded-pill ms-1 fw-normal" style="font-size:0.7rem;">
+                            #{{ "%05d" | format(order.id) }}
+                        </span>
+                    </h6>
+
+                    <div class="checkout-item-list mb-3">
+                        {% for item in order.items %}
+                        <div class="d-flex gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+                            <div class="position-relative flex-shrink-0">
+                                <img src="{{ item.product.primary_image_url }}"
+                                     alt="{{ item.product.name }}"
+                                     class="checkout-item-thumb rounded-3 object-fit-cover">
+                                <span class="checkout-qty-badge">{{ item.quantity }}</span>
+                            </div>
+                            <div class="flex-grow-1 min-w-0 d-flex flex-column justify-content-center">
+                                <div class="fw-semibold small text-dark text-truncate">{{ item.product.name }}</div>
+                                <div class="text-secondary" style="font-size:0.75rem;">{{ item.product.business.name }}</div>
+                            </div>
+                            <div class="text-end flex-shrink-0 d-flex align-items-center">
+                                <span class="fw-bold small text-primary">
+                                    ₹{{ "%.2f" | format(item.unit_price | float * item.quantity) }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-secondary">Subtotal</span>
+                            <span>₹{{ "%.2f" | format(subtotal) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-3">
+                            <span class="text-secondary">Shipping</span>
+                            <span>{% if shipping == 0 %}<span class="text-success">Free</span>{% else %}₹{{ "%.2f" | format(shipping) }}{% endif %}</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold mb-4">
+                            <span>Total</span>
+                            <span class="text-primary fs-5">₹{{ "%.2f" | format(order.total_amount | float) }}</span>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2 text-secondary small">
+                            <div><i class="bi bi-geo-alt-fill text-primary me-2"></i>
+                                {{ order.shipping_address | truncate(60) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Processing overlay -->
+<div id="payOverlay" class="pay-overlay d-none">
+    <div class="pay-overlay-inner">
+        <div class="pay-overlay-spinner mb-3"></div>
+        <h6 class="fw-bold text-white mb-1">Processing Payment…</h6>
+        <p class="text-white opacity-75 small mb-0">Please do not close or refresh this page.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    "use strict";
+
+    // ── Tab switching ──────────────────────────────────────────────
+    const tabs       = document.querySelectorAll(".pay-tab-btn");
+    const panels     = document.querySelectorAll(".pay-panel");
+    const methodInput = document.getElementById("paymentMethodInput");
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            const method = this.dataset.method;
+            tabs.forEach(t => t.classList.remove("active"));
+            this.classList.add("active");
+            panels.forEach(p => p.classList.add("d-none"));
+            document.getElementById("panel-" + method)?.classList.remove("d-none");
+            methodInput.value = method;
+        });
+    });
+
+    // ── Live card preview ──────────────────────────────────────────
+    function fmtCardNum(val) {
+        const raw = val.replace(/\D/g, "").substring(0, 16);
+        return raw.replace(/(.{4})/g, "$1 ").trim() || "•••• •••• •••• ••••";
+    }
+
+    document.querySelectorAll("input[name='card_number']").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+            const raw = this.value.replace(/\D/g, "").substring(0, 16);
+            this.value = raw.replace(/(.{4})/g, "$1 ").trim();
+            const el = document.getElementById("cardNumberDisplay");
+            if (el) el.textContent = fmtCardNum(this.value) || "•••• •••• •••• ••••";
+            // Detect network
+            const net = document.getElementById("cardNetwork");
+            if (net) {
+                const first = raw[0];
+                if      (first === "4") net.innerHTML = '<span class="fw-bold text-warning">VISA</span>';
+                else if (first === "5") net.innerHTML = '<span class="fw-bold text-danger">MC</span>';
+                else if (first === "3") net.innerHTML = '<span class="fw-bold text-info">AMEX</span>';
+                else                   net.innerHTML = '<i class="bi bi-credit-card fs-4 opacity-75"></i>';
+            }
+        });
+    });
+
+    document.querySelectorAll("input[name='card_name']").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+            const el = document.getElementById("cardNameDisplay");
+            if (el) el.textContent = this.value.toUpperCase() || "YOUR NAME";
+        });
+    });
+
+    document.querySelectorAll("input[name='expiry']").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+            let v = this.value.replace(/\D/g, "").substring(0, 4);
+            if (v.length >= 3) v = v.substring(0, 2) + "/" + v.substring(2);
+            this.value = v;
+            const el = document.getElementById("cardExpiryDisplay");
+            if (el) el.textContent = this.value || "MM/YY";
+        });
+    });
+
+    // ── Password toggle ───────────────────────────────────────────
+    document.querySelectorAll(".toggle-pwd").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const inp = document.getElementById(this.dataset.target);
+            if (!inp) return;
+            const show = inp.type === "password";
+            inp.type = show ? "text" : "password";
+            this.querySelector("i").className = show ? "bi bi-eye-slash" : "bi bi-eye";
+        });
+    });
+
+    // ── Form submit + overlay ─────────────────────────────────────
+    document.getElementById("paymentForm").addEventListener("submit", function () {
+        document.getElementById("payBtn").disabled = true;
+        document.getElementById("payOverlay").classList.remove("d-none");
+    });
+
+})();
+</script>
+{% endblock %}

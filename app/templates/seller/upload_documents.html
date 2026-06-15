@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Upload Documents — SheMarket{% endblock %}
+
+{% block content %}
+<section class="seller-reg-section py-5">
+    <div class="container">
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+
+                <!-- Header -->
+                <div class="mb-4">
+                    <a href="{{ url_for('seller.dashboard') }}" class="text-secondary text-decoration-none small">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                    <h2 class="fw-bold mt-2">Verification Documents</h2>
+                    <p class="text-secondary">Upload all three documents to complete your women-owned business verification.</p>
+                </div>
+
+                <!-- Progress -->
+                {% set uploaded_count = uploaded_types | length %}
+                {% set total = required_docs | length %}
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold">Verification Progress</span>
+                        <span class="text-secondary small">{{ uploaded_count }} / {{ total }} documents</span>
+                    </div>
+                    <div class="progress rounded-pill" style="height: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar"
+                             style="width: {{ (uploaded_count / total * 100) | int }}%"></div>
+                    </div>
+                    {% if uploaded_count == total %}
+                    <p class="text-success small mt-2 mb-0">
+                        <i class="bi bi-check-circle-fill me-1"></i>All documents uploaded. Pending admin review.
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Document Upload Cards -->
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('seller.upload_documents') }}" id="docForm">
+                    {% for doc_type, label, hint in required_docs %}
+                    {% set existing = docs_map.get(doc_type) %}
+                    {% set is_uploaded = doc_type in uploaded_types %}
+                    {% if existing %}{% set doc_color, doc_label = existing.status_badge %}{% endif %}
+
+                    <div class="card border-0 shadow-sm rounded-4 mb-3 doc-card {{ 'doc-card--approved' if existing and existing.doc_status.value == 'approved' else '' }}">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="doc-type-icon rounded-3 d-flex align-items-center justify-content-center flex-shrink-0
+                                        {% if existing and existing.doc_status.value == 'approved' %}bg-success-soft
+                                        {% elif existing and existing.doc_status.value == 'rejected' %}bg-danger-soft
+                                        {% elif is_uploaded %}bg-warning-soft
+                                        {% else %}bg-purple-soft{% endif %}">
+                                        <i class="bi bi-file-earmark-text fs-4
+                                            {% if existing and existing.doc_status.value == 'approved' %}text-success
+                                            {% elif existing and existing.doc_status.value == 'rejected' %}text-danger
+                                            {% elif is_uploaded %}text-warning
+                                            {% else %}text-primary{% endif %}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ label }}</div>
+                                        <div class="text-secondary small">{{ hint }}</div>
+                                    </div>
+                                </div>
+                                {% if existing %}
+                                <span class="badge bg-{{ doc_color }} rounded-pill flex-shrink-0">{{ doc_label }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill flex-shrink-0">Not Uploaded</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Rejection comment -->
+                            {% if existing and existing.doc_status.value == 'rejected' and existing.rejection_comment %}
+                            <div class="alert alert-danger py-2 px-3 small rounded-3 mb-3">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                <strong>Rejection reason:</strong> {{ existing.rejection_comment }}
+                            </div>
+                            {% endif %}
+
+                            <!-- Existing file preview -->
+                            {% if existing %}
+                            <div class="doc-preview-wrap mb-3 d-flex align-items-center gap-3">
+                                {% if existing.is_image %}
+                                <img src="{{ existing.file_path }}" alt="{{ label }}" class="doc-thumbnail rounded-2">
+                                {% else %}
+                                <div class="doc-pdf-icon rounded-2 bg-danger-soft d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-file-earmark-pdf text-danger fs-3"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="small fw-semibold text-truncate" style="max-width:200px;">
+                                        {{ existing.original_filename or existing.file_url }}
+                                    </div>
+                                    <div class="text-secondary" style="font-size:0.75rem;">
+                                        Uploaded {{ existing.uploaded_at.strftime("%b %d, %Y at %H:%M") }}
+                                    </div>
+                                    {% if existing.doc_status.value != 'approved' %}
+                                    <span class="text-primary small">Replace below ↓</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Upload input (hidden if approved) -->
+                            {% if not existing or existing.doc_status.value != 'approved' %}
+                            <div class="upload-drop-zone rounded-3 p-3 text-center" id="zone-{{ doc_type.value }}">
+                                <i class="bi bi-cloud-upload fs-3 text-primary mb-1 d-block"></i>
+                                <div class="small text-secondary mb-2">PNG, JPG, WEBP or PDF · Max 10 MB</div>
+                                <label class="btn btn-outline-primary btn-sm" for="file-{{ doc_type.value }}">
+                                    <i class="bi bi-folder2-open me-1"></i>Choose file
+                                </label>
+                                <input type="file" id="file-{{ doc_type.value }}"
+                                       name="{{ doc_type.value }}"
+                                       class="d-none doc-file-input"
+                                       accept="image/png,image/jpeg,image/webp,application/pdf"
+                                       data-label="{{ label }}">
+                                <div class="mt-2 small file-name-display text-secondary" id="name-{{ doc_type.value }}"></div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-success py-2 px-3 small rounded-3 mb-0">
+                                <i class="bi bi-lock-fill me-1"></i>This document has been approved and cannot be replaced.
+                            </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex justify-content-end gap-3 mt-2">
+                        <a href="{{ url_for('seller.dashboard') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 fw-semibold" id="submitDocBtn">
+                            <i class="bi bi-cloud-upload me-2"></i>Upload Documents
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Show selected filename in drop zone
+document.querySelectorAll(".doc-file-input").forEach(function (input) {
+    input.addEventListener("change", function () {
+        const display = document.getElementById("name-" + this.id.replace("file-", ""));
+        if (this.files[0]) {
+            const name  = this.files[0].name;
+            const size  = (this.files[0].size / 1024 / 1024).toFixed(2);
+            const ok    = this.files[0].size <= 10 * 1024 * 1024;
+            display.innerHTML = ok
+                ? `<i class="bi bi-check-circle text-success me-1"></i><strong>${name}</strong> (${size} MB)`
+                : `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>${name} — exceeds 10 MB limit</span>`;
+            if (!ok) this.value = "";
+        } else {
+            display.textContent = "";
+        }
+    });
+});
+
+// Drag-and-drop styling
+document.querySelectorAll(".upload-drop-zone").forEach(function (zone) {
+    const id    = zone.id.replace("zone-", "");
+    const input = document.getElementById("file-" + id);
+    zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drop-hover"); });
+    zone.addEventListener("dragleave", () => zone.classList.remove("drop-hover"));
+    zone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        zone.classList.remove("drop-hover");
+        if (e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            input.dispatchEvent(new Event("change"));
+        }
+    });
+});
+</script>
+{% endblock %}

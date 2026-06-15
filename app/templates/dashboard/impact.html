@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}My Impact — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:1100px;">
+
+    <!-- ── Page Header ────────────────────────────────────────────────────── -->
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-5">
+        <div>
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 mb-2 d-inline-block">
+                <i class="bi bi-patch-check-fill me-1"></i>Women-Owned Impact Report
+            </span>
+            <h1 class="fw-bold mb-1">Your Impact, {{ current_user.full_name.split()[0] }}</h1>
+            <p class="text-secondary mb-0">
+                Every purchase you make directly supports verified women-owned businesses.
+                Here's the difference you've made so far.
+            </p>
+        </div>
+        <a href="{{ url_for('main.catalog', verified='1') }}"
+           class="btn btn-primary rounded-pill px-4 align-self-start">
+            <i class="bi bi-bag-heart me-2"></i>Keep Supporting
+        </a>
+    </div>
+
+    <!-- ── Stat Cards ─────────────────────────────────────────────────────── -->
+    <div class="row g-4 mb-5">
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 text-center impact-stat-card">
+                <div class="impact-stat-icon bg-primary-subtle text-primary mx-auto mb-3">
+                    <i class="bi bi-shop-window"></i>
+                </div>
+                <div class="display-6 fw-bold text-primary mb-1">{{ supported_count }}</div>
+                <div class="text-secondary small fw-semibold">Businesses Supported</div>
+                <div class="text-secondary" style="font-size:0.72rem;">verified women-owned</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 text-center impact-stat-card">
+                <div class="impact-stat-icon bg-success-subtle text-success mx-auto mb-3">
+                    <i class="bi bi-currency-rupee"></i>
+                </div>
+                <div class="display-6 fw-bold text-success mb-1">
+                    ₹{{ "%.0f"|format(total_spent) }}
+                </div>
+                <div class="text-secondary small fw-semibold">Total Spent</div>
+                <div class="text-secondary" style="font-size:0.72rem;">on women-owned businesses</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 text-center impact-stat-card">
+                <div class="impact-stat-icon bg-warning-subtle text-warning mx-auto mb-3">
+                    <i class="bi bi-bag-check-fill"></i>
+                </div>
+                <div class="display-6 fw-bold text-warning mb-1">{{ total_orders }}</div>
+                <div class="text-secondary small fw-semibold">Completed Orders</div>
+                <div class="text-secondary" style="font-size:0.72rem;">from verified sellers</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 text-center impact-stat-card">
+                <div class="impact-stat-icon bg-info-subtle text-info mx-auto mb-3">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                </div>
+                <div class="display-6 fw-bold text-info mb-1">{{ categories|length }}</div>
+                <div class="text-secondary small fw-semibold">Categories Supported</div>
+                <div class="text-secondary" style="font-size:0.72rem;">across all purchases</div>
+            </div>
+        </div>
+
+    </div>
+
+    {% if total_orders == 0 %}
+    <!-- ── Empty State ────────────────────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+        <i class="bi bi-bag-heart fs-1 text-primary opacity-50 d-block mb-3"></i>
+        <h4 class="fw-bold mb-2">Your impact journey starts here</h4>
+        <p class="text-secondary mb-4">
+            Make your first purchase from a verified women-owned business and<br>
+            watch your impact grow right here.
+        </p>
+        <a href="{{ url_for('main.catalog', verified='1') }}"
+           class="btn btn-primary btn-lg rounded-pill px-5 mx-auto">
+            <i class="bi bi-bag me-2"></i>Shop Women-Owned
+        </a>
+    </div>
+
+    {% else %}
+
+    <!-- ── Charts Row ─────────────────────────────────────────────────────── -->
+    <div class="row g-4 mb-4">
+
+        <!-- Monthly Spending Chart -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="impact-stat-icon impact-stat-icon--sm bg-success-subtle text-success">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Monthly Spending</h6>
+                        <p class="text-secondary mb-0" style="font-size:0.78rem;">
+                            Amount spent on women-owned businesses per month
+                        </p>
+                    </div>
+                </div>
+                <div style="position:relative;height:260px;">
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Distribution Chart -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="impact-stat-icon impact-stat-icon--sm bg-info-subtle text-info">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Category Breakdown</h6>
+                        <p class="text-secondary mb-0" style="font-size:0.78rem;">Spend by product category</p>
+                    </div>
+                </div>
+                <div style="position:relative;height:260px;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Orders Per Month Chart -->
+    <div class="row g-4 mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="impact-stat-icon impact-stat-icon--sm bg-primary-subtle text-primary">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">Orders Per Month</h6>
+                        <p class="text-secondary mb-0" style="font-size:0.78rem;">
+                            Number of orders placed with women-owned businesses per month
+                        </p>
+                    </div>
+                </div>
+                <div style="position:relative;height:200px;">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Bottom Row: Categories + Top Businesses ───────────────────────── -->
+    <div class="row g-4">
+
+        <!-- Categories Supported -->
+        {% if categories %}
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-tags-fill text-primary me-2"></i>Categories You've Supported
+                </h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% set cat_colors = [
+                        "primary","success","warning","info","danger",
+                        "secondary","dark","primary","success","warning"
+                    ] %}
+                    {% for cat in categories %}
+                    <a href="{{ url_for('main.catalog', category=cat) }}"
+                       class="badge rounded-pill bg-{{ cat_colors[loop.index0 % cat_colors|length] }}-subtle
+                              text-{{ cat_colors[loop.index0 % cat_colors|length] }}
+                              text-decoration-none px-3 py-2 fw-normal"
+                       style="font-size:0.78rem;">
+                        {{ cat }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top Supported Businesses -->
+        {% if top_businesses %}
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-trophy-fill text-warning me-2"></i>Top Businesses You've Supported
+                </h6>
+                <div class="d-flex flex-column gap-3">
+                    {% for biz, spent, order_cnt in top_businesses %}
+                    {% set pct = ((spent / total_spent * 100) | round | int) if total_spent else 0 %}
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="{{ biz.logo_url }}"
+                             alt="{{ biz.name }}"
+                             class="rounded-3 flex-shrink-0 object-fit-cover"
+                             style="width:44px;height:44px;">
+                        <div class="flex-grow-1 min-width-0">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-semibold small text-truncate">
+                                    {{ biz.name }}
+                                    <span class="badge bg-success-subtle text-success rounded-pill ms-1"
+                                          style="font-size:0.65rem;">
+                                        <i class="bi bi-patch-check-fill"></i> Verified
+                                    </span>
+                                </span>
+                                <span class="text-secondary small ms-2 flex-shrink-0">
+                                    ₹{{ "%.0f"|format(spent) }}
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill" style="height:6px;">
+                                <div class="progress-bar bg-primary rounded-pill"
+                                     style="width:{{ pct }}%;"></div>
+                            </div>
+                            <div class="text-secondary mt-1" style="font-size:0.7rem;">
+                                {{ order_cnt }} order{{ 's' if order_cnt != 1 }} · {{ pct }}% of your spending
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('main.catalog', verified='1') }}"
+                   class="btn btn-outline-primary btn-sm rounded-pill mt-4 w-100">
+                    <i class="bi bi-shop me-1"></i>Discover More Women-Owned Businesses
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    {% endif %}{# end total_orders check #}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const PALETTE = [
+        "#6f42c1","#0d6efd","#20c997","#fd7e14",
+        "#dc3545","#0dcaf0","#ffc107","#198754",
+        "#6c757d","#d63384"
+    ];
+
+    // ── Chart defaults ────────────────────────────────────────────────────
+    Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+    Chart.defaults.font.size   = 12;
+    Chart.defaults.color       = "#6c757d";
+
+    // ── Monthly Spending ─────────────────────────────────────────────────
+    const spendCtx = document.getElementById("spendingChart");
+    if (spendCtx) {
+        new Chart(spendCtx, {
+            type: "line",
+            data: {
+                labels: {{ spend_labels | tojson }},
+                datasets: [{
+                    label: "Amount Spent ($)",
+                    data: {{ spend_values | tojson }},
+                    borderColor: "#6f42c1",
+                    backgroundColor: "rgba(111,66,193,0.08)",
+                    borderWidth: 2.5,
+                    pointBackgroundColor: "#6f42c1",
+                    pointRadius: 4,
+                    tension: 0.4,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ₹${ctx.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "rgba(0,0,0,0.04)" },
+                        ticks: {
+                            callback: v => "₹" + v.toLocaleString()
+                        }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // ── Orders Per Month ─────────────────────────────────────────────────
+    const ordersCtx = document.getElementById("ordersChart");
+    if (ordersCtx) {
+        new Chart(ordersCtx, {
+            type: "bar",
+            data: {
+                labels: {{ orders_labels | tojson }},
+                datasets: [{
+                    label: "Orders",
+                    data: {{ orders_values | tojson }},
+                    backgroundColor: "rgba(13,110,253,0.75)",
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y} order${ctx.parsed.y !== 1 ? "s" : ""}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        grid: { color: "rgba(0,0,0,0.04)" }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // ── Category Distribution ─────────────────────────────────────────────
+    const catCtx = document.getElementById("categoryChart");
+    if (catCtx) {
+        const catLabels = {{ cat_labels | tojson }};
+        new Chart(catCtx, {
+            type: "doughnut",
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: {{ cat_values | tojson }},
+                    backgroundColor: PALETTE.slice(0, catLabels.length),
+                    borderWidth: 2,
+                    borderColor: "#fff",
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "62%",
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            boxWidth: 10,
+                            padding: 10,
+                            font: { size: 11 },
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ₹${ctx.parsed.toLocaleString()}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
+
+<style>
+.impact-stat-card { transition: transform .15s, box-shadow .15s; }
+.impact-stat-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.1) !important; }
+
+.impact-stat-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+}
+.impact-stat-icon--sm {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}

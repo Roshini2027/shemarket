@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Seller Dashboard — SheMarket{% endblock %}
+
+{% block content %}
+{% set badge_color, badge_label = business.status_badge %}
+
+<section class="py-5">
+    <div class="container">
+
+        <!-- ── Page Header ──────────────────────────────────────────── -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <span class="badge bg-purple-soft text-primary fw-semibold px-3 py-2 rounded-pill mb-2">
+                    <i class="bi bi-speedometer2 me-1"></i>Seller Dashboard
+                </span>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <h2 class="fw-bold mb-0">{{ business.name }}</h2>
+                    {% if business.is_verified %}
+                    <span class="verified-badge">
+                        <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned Business
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-secondary mb-0">{{ business.category }}</p>
+            </div>
+            <a href="{{ url_for('seller.edit_business') }}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil me-2"></i>Edit Business
+            </a>
+        </div>
+
+        <!-- ── Status Banners ──────────────────────────────────────── -->
+        {% if business.status.value == 'pending_verification' %}
+        <div class="alert alert-warning border-0 rounded-4 d-flex align-items-start gap-3 mb-4" role="alert">
+            <i class="bi bi-hourglass-split fs-4 mt-1 flex-shrink-0"></i>
+            <div>
+                <strong>Pending Verification</strong>
+                <p class="mb-0 small">Your business is under review. Our team will verify it within 2–3 business days.
+                {% if not business.docs_complete() %}
+                <br><a href="{{ url_for('seller.upload_documents') }}" class="fw-semibold">
+                    Upload missing documents</a> to speed up verification.
+                {% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% elif business.status.value == 'rejected' %}
+        <div class="alert alert-danger border-0 rounded-4 d-flex align-items-start gap-3 mb-4" role="alert">
+            <i class="bi bi-x-circle fs-4 mt-1 flex-shrink-0"></i>
+            <div>
+                <strong>Verification Rejected</strong>
+                {% if business.rejection_comment %}
+                <p class="mb-1 small"><strong>Reason:</strong> {{ business.rejection_comment }}</p>
+                {% endif %}
+                <p class="mb-0 small">
+                    Please <a href="{{ url_for('seller.upload_documents') }}" class="fw-semibold">re-upload your documents</a>
+                    to resubmit for verification.
+                </p>
+            </div>
+        </div>
+
+        {% elif business.status.value == 'verified' %}
+        <div class="alert alert-success border-0 rounded-4 d-flex align-items-start gap-3 mb-4" role="alert">
+            <i class="bi bi-patch-check-fill fs-4 mt-1 flex-shrink-0"></i>
+            <div>
+                <strong>Verified Women-Owned Business</strong>
+                <p class="mb-0 small">
+                    Your business is live on SheMarket.
+                    {% if business.verified_at %}
+                    Verified on {{ business.verified_at.strftime("%b %d, %Y") }}.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+
+            <!-- ── Business Card ──────────────────────────────────── -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                    <div class="biz-card-header d-flex align-items-center justify-content-center position-relative">
+                        <img src="{{ business.logo_url }}"
+                             alt="{{ business.name }} logo"
+                             class="biz-logo rounded-3 shadow">
+                        {% if business.is_verified %}
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-success rounded-pill">
+                            <i class="bi bi-patch-check-fill me-1"></i>Verified
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="fw-bold mb-0">{{ business.name }}</h5>
+                            <span class="badge bg-{{ badge_color }} rounded-pill">{{ badge_label }}</span>
+                        </div>
+                        <p class="text-secondary small mb-3">{{ business.description }}</p>
+                        <ul class="list-unstyled small text-secondary mb-0">
+                            {% if business.category %}
+                            <li class="mb-1"><i class="bi bi-tag me-2 text-primary"></i>{{ business.category }}</li>
+                            {% endif %}
+                            {% if business.address %}
+                            <li class="mb-1"><i class="bi bi-geo-alt me-2 text-primary"></i>{{ business.address }}</li>
+                            {% endif %}
+                            {% if business.contact_phone %}
+                            <li class="mb-1"><i class="bi bi-telephone me-2 text-primary"></i>{{ business.contact_phone }}</li>
+                            {% endif %}
+                            {% if business.contact_email %}
+                            <li class="mb-1"><i class="bi bi-envelope me-2 text-primary"></i>{{ business.contact_email }}</li>
+                            {% endif %}
+                            <li class="text-muted"><i class="bi bi-calendar me-2"></i>Registered {{ business.created_at.strftime("%b %d, %Y") }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Quick Stats + Actions ──────────────────────────── -->
+            <div class="col-lg-8">
+
+                <!-- Stats -->
+                <div class="row g-3 mb-4">
+                    {% set stats = [
+                        ("bi-box-seam",  "primary", business.products | length, "Products"),
+                        ("bi-bag-check", "success", "0", "Orders"),
+                        ("bi-star-fill", "warning", "—", "Avg Rating"),
+                        ("bi-eye",       "info",    "0", "Profile Views"),
+                    ] %}
+                    {% for icon, color, val, label in stats %}
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
+                            <i class="bi {{ icon }} text-{{ color }} fs-3 mb-2"></i>
+                            <div class="fw-bold fs-4">{{ val }}</div>
+                            <div class="text-secondary small">{{ label }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Action cards -->
+                <div class="row g-3">
+                    {% set actions = [
+                        ("bi-plus-circle",   "primary", url_for('products.add_product'),      "Add Product",    "List a new product for sale"),
+                        ("bi-bag-check",     "success", url_for('orders.seller_orders'),      "View Orders",    "See and manage customer orders"),
+                        ("bi-file-earmark",  "warning", url_for('seller.upload_documents'),   "Documents",      "Upload verification documents"),
+                        ("bi-pencil-square", "info",    url_for('seller.edit_business'),      "Edit Details",   "Update your business information"),
+                    ] %}
+                    {% for icon, color, href, title, desc in actions %}
+                    <div class="col-md-6">
+                        <a href="{{ href }}" class="card border-0 shadow-sm rounded-4 p-3 text-decoration-none action-card h-100">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="action-icon bg-{{ color }}-soft rounded-3 d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <i class="bi {{ icon }} text-{{ color }} fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-dark">{{ title }}</div>
+                                    <div class="text-secondary small">{{ desc }}</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

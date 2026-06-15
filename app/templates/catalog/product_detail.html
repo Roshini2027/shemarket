@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-decoration-none text-secondary">Home</a></li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('main.catalog') }}" class="text-decoration-none text-secondary">Shop</a>
+            </li>
+            {% if product.category %}
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('main.catalog', category=product.category) }}"
+                   class="text-decoration-none text-secondary">{{ product.category }}</a>
+            </li>
+            {% endif %}
+            <li class="breadcrumb-item active text-truncate" style="max-width:200px;">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-5">
+
+        <!-- ── Image Carousel ────────────────────────────────────── -->
+        <div class="col-lg-6">
+            {% if product.images %}
+            <div id="productCarousel" class="carousel slide rounded-4 overflow-hidden shadow-sm" data-bs-ride="false">
+                <div class="carousel-inner">
+                    {% for img in product.images %}
+                    <div class="carousel-item {{ 'active' if img.is_primary or loop.first }}">
+                        <div class="detail-carousel-img">
+                            <img src="{{ img.url }}" alt="{{ product.name }}" class="w-100 h-100 object-fit-cover">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if product.images | length > 1 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Thumbnail strip -->
+            {% if product.images | length > 1 %}
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                {% for img in product.images %}
+                <button type="button"
+                        class="detail-thumb rounded-3 border-0 overflow-hidden p-0
+                               {{ 'detail-thumb--active' if img.is_primary or loop.first }}"
+                        data-bs-target="#productCarousel"
+                        data-bs-slide-to="{{ loop.index0 }}">
+                    <img src="{{ img.url }}" alt="{{ loop.index }}" class="w-100 h-100 object-fit-cover">
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="detail-carousel-img rounded-4 overflow-hidden shadow-sm bg-light d-flex align-items-center justify-content-center">
+                <img src="/static/img/default_product.png" alt="{{ product.name }}" class="w-100 h-100 object-fit-cover">
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Product Info ───────────────────────────────────────── -->
+        <div class="col-lg-6">
+
+            <!-- Name + Verified -->
+            <div class="d-flex align-items-start gap-2 flex-wrap mb-2">
+                <h1 class="fw-bold fs-3 mb-0">{{ product.name }}</h1>
+            </div>
+            {% if product.business.is_verified %}
+            <span class="verified-badge mb-3 d-inline-flex">
+                <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned Business
+            </span>
+            {% endif %}
+
+            <!-- Price -->
+            <div class="mb-2">
+                <span class="display-6 fw-bold text-primary">₹{{ "%.2f" | format(product.price | float) }}</span>
+            </div>
+
+            <!-- Rating summary -->
+            {% set avg = product._avg_rating %}
+            {% set cnt = product._review_count %}
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="star-display">
+                    {% for i in range(1,6) %}
+                    <i class="bi {{ 'bi-star-fill' if avg >= i else ('bi-star-half' if avg >= i-0.5 else 'bi-star') }}
+                               star-icon {{ 'filled' if avg >= i else ('half' if avg >= i-0.5 else '') }}"></i>
+                    {% endfor %}
+                </span>
+                <span class="fw-semibold" id="headerAvg">{{ avg }}</span>
+                <a href="#reviewsSection" class="text-secondary small text-decoration-none" id="headerReviewCount">
+                    ({{ cnt }} review{{ 's' if cnt != 1 }})
+                </a>
+            </div>
+
+            <!-- Stock status -->
+            <div class="mb-3">
+                {% if product.is_in_stock %}
+                <span class="badge bg-success-soft text-success rounded-pill px-3 py-2">
+                    <i class="bi bi-check-circle me-1"></i>In Stock ({{ product.stock_qty }} available)
+                </span>
+                {% else %}
+                <span class="badge bg-warning-soft text-warning rounded-pill px-3 py-2">
+                    <i class="bi bi-exclamation-circle me-1"></i>Out of Stock
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Category -->
+            {% if product.category %}
+            <div class="mb-4">
+                <a href="{{ url_for('main.catalog', category=product.category) }}"
+                   class="badge bg-purple-soft text-primary rounded-pill px-3 py-2 text-decoration-none">
+                    <i class="bi bi-tag me-1"></i>{{ product.category }}
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Description -->
+            <div class="mb-4">
+                <h6 class="fw-semibold mb-2">Description</h6>
+                <p class="text-secondary lh-lg">{{ product.description }}</p>
+            </div>
+
+            <!-- Add to Cart -->
+            <div class="d-flex gap-3 mb-4 flex-wrap">
+                <div class="input-group" style="max-width:130px;">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="qtyDown">−</button>
+                    <input type="number" id="qtyInput" class="form-control text-center border-secondary" value="1" min="1" max="{{ product.stock_qty }}">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="qtyUp">+</button>
+                </div>
+                {% if current_user.is_authenticated %}
+                <button class="btn btn-primary fw-semibold px-4 flex-grow-1 rounded-3"
+                        id="addToCartBtn"
+                        onclick="addToCart({{ product.id }}, parseInt(document.getElementById('qtyInput').value), this)"
+                        {{ 'disabled' if not product.is_in_stock }}>
+                    <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                </button>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}"
+                   class="btn btn-primary fw-semibold px-4 flex-grow-1 rounded-3">
+                    <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Meta -->
+            <ul class="list-unstyled text-secondary small">
+                <li class="mb-1"><i class="bi bi-calendar me-2 text-primary"></i>
+                    Listed {{ product.created_at.strftime("%B %d, %Y") }}
+                </li>
+                {% if product.updated_at and product.updated_at != product.created_at %}
+                <li class="mb-1"><i class="bi bi-arrow-clockwise me-2 text-primary"></i>
+                    Updated {{ product.updated_at.strftime("%B %d, %Y") }}
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- ── Seller Info Card ───────────────────────────────────────── -->
+    <div class="row mt-5">
+        <div class="col-lg-6">
+            <h5 class="fw-bold mb-3">About the Seller</h5>
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <img src="{{ product.business.logo_url }}"
+                         alt="{{ product.business.name }}"
+                         class="rounded-3 flex-shrink-0"
+                         style="width:60px;height:60px;object-fit:cover;">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold">{{ product.business.name }}</span>
+                            {% if product.business.is_verified %}
+                            <span class="verified-badge" style="font-size:0.65rem;padding:2px 8px;">
+                                <i class="bi bi-patch-check-fill"></i> Verified
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if product.business.category %}
+                        <div class="text-secondary small">{{ product.business.category }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if product.business.description %}
+                <p class="text-secondary small mb-3">{{ product.business.description | truncate(200) }}</p>
+                {% endif %}
+
+                <ul class="list-unstyled small text-secondary mb-3">
+                    {% if product.business.address %}
+                    <li class="mb-1"><i class="bi bi-geo-alt me-2 text-primary"></i>{{ product.business.address }}</li>
+                    {% endif %}
+                    {% if product.business.contact_phone %}
+                    <li class="mb-1"><i class="bi bi-telephone me-2 text-primary"></i>{{ product.business.contact_phone }}</li>
+                    {% endif %}
+                    {% if product.business.contact_email %}
+                    <li class="mb-1"><i class="bi bi-envelope me-2 text-primary"></i>{{ product.business.contact_email }}</li>
+                    {% endif %}
+                    {% if product.business.verified_at %}
+                    <li><i class="bi bi-patch-check-fill text-success me-2"></i>
+                        Verified {{ product.business.verified_at.strftime("%B %Y") }}
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <a href="{{ url_for('main.catalog', q=product.business.name) }}"
+                   class="btn btn-outline-primary btn-sm rounded-3 w-100">
+                    <i class="bi bi-shop me-2"></i>View All Products from {{ product.business.name | truncate(20) }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── You Might Also Like ──────────────────────────────────────── -->
+    {% set rec_similar = recs.similar if recs else [] %}
+    {% set rec_fallback = related if not rec_similar else [] %}
+    {% set similar_list = rec_similar or rec_fallback %}
+    {% if similar_list %}
+    <div class="mt-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h5 class="fw-bold mb-0"><i class="bi bi-stars text-primary me-2"></i>You Might Also Like</h5>
+            <a href="{{ url_for('main.catalog', category=product.category) }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in similar_list %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Trending Now ───────────────────────────────────────────────── -->
+    {% if recs and recs.trending %}
+    <div class="mt-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h5 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Trending Now</h5>
+            <a href="{{ url_for('main.catalog', sort='newest') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.trending %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Women-Owned Picks ─────────────────────────────────────────── -->
+    {% if recs and recs.women_owned %}
+    <div class="mt-5">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 mb-1 d-inline-block">
+                    <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned
+                </span>
+                <h5 class="fw-bold mb-0">Women-Owned Picks</h5>
+            </div>
+            <a href="{{ url_for('main.catalog', verified='1') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.women_owned %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Reviews & Ratings ─────────────────────────────────────── -->
+    <div class="mt-5 pt-2" id="reviewsSection">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <h5 class="fw-bold mb-0">
+                <i class="bi bi-star-fill text-warning me-2"></i>Ratings &amp; Reviews
+            </h5>
+            <span class="text-secondary small" id="reviewCount">
+                {{ product._review_count }} review{{ 's' if product._review_count != 1 }}
+            </span>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- ── LEFT: summary + form ───────────────────────────── -->
+            <div class="col-lg-4">
+
+                <!-- Rating summary card -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 review-summary-card">
+                    <div class="text-center mb-3">
+                        <div class="review-big-score" id="avgRatingDisplay">{{ product._avg_rating }}</div>
+                        <div class="review-big-stars mb-1">
+                            {% for i in range(1, 6) %}
+                            {% set a = product._avg_rating %}
+                            <i class="bi {{ 'bi-star-fill' if a >= i else ('bi-star-half' if a >= i-0.5 else 'bi-star') }}
+                                       review-star {{ 'filled' if a >= i else ('half' if a >= i-0.5 else '') }}"></i>
+                            {% endfor %}
+                        </div>
+                        <div class="text-secondary small">out of 5</div>
+                    </div>
+
+                    <!-- Breakdown bars -->
+                    <div class="d-flex flex-column gap-2" id="breakdownBars">
+                        {% for star in [5, 4, 3, 2, 1] %}
+                        {% set cnt = breakdown.get(star, 0) %}
+                        {% set pct = ((cnt / product._review_count * 100) | round | int) if product._review_count else 0 %}
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="review-bar-label text-secondary small">
+                                {{ star }}<i class="bi bi-star-fill text-warning ms-1" style="font-size:0.6rem;"></i>
+                            </span>
+                            <div class="flex-grow-1">
+                                <div class="review-bar-track rounded-pill">
+                                    <div class="review-bar-fill rounded-pill" style="width:{{ pct }}%;"></div>
+                                </div>
+                            </div>
+                            <span class="review-bar-count text-secondary small">{{ cnt }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Write / Edit review form -->
+                {% if current_user.is_authenticated %}
+
+                    {% if my_review %}
+                    <!-- Existing review — show edit form -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 review-form-card" id="myReviewCard">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-pencil-square text-primary me-2"></i>Your Review
+                        </h6>
+                        <div class="review-star-picker mb-2" id="editStarPicker">
+                            {% for i in range(1, 6) %}
+                            <i class="bi bi-star-fill review-pick-star {{ 'active' if i <= my_review.rating }}"
+                               data-value="{{ i }}"></i>
+                            {% endfor %}
+                        </div>
+                        <div class="review-rating-label mb-3 small text-warning fw-semibold" id="editRatingLabel">
+                            {{ my_review.rating_label }}
+                        </div>
+                        <input type="hidden" id="editRatingInput" value="{{ my_review.rating }}">
+                        <input type="text" id="editTitleInput"
+                               class="form-control form-control-sm rounded-3 mb-2"
+                               placeholder="Review title (optional)" maxlength="120"
+                               value="{{ my_review.title or '' }}">
+                        <textarea id="editCommentInput"
+                                  class="form-control form-control-sm rounded-3 mb-2"
+                                  rows="3" placeholder="Update your review…" maxlength="2000">{{ my_review.comment or '' }}</textarea>
+                        <div class="text-secondary mb-3" style="font-size:0.72rem;" id="editCharCount">
+                            {{ (my_review.comment or '') | length }} / 2000
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm rounded-3 flex-grow-1 fw-semibold"
+                                    id="editReviewBtn"
+                                    data-review-id="{{ my_review.id }}"
+                                    data-url="{{ url_for('reviews.edit', review_id=my_review.id) }}">
+                                <i class="bi bi-check-lg me-1"></i>Update
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm rounded-3"
+                                    id="deleteReviewBtn"
+                                    data-review-id="{{ my_review.id }}"
+                                    data-url="{{ url_for('reviews.delete', review_id=my_review.id) }}"
+                                    title="Delete review">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {% elif can_review %}
+                    <!-- Purchased, no review yet -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 review-form-card">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-star text-primary me-2"></i>Write a Review
+                        </h6>
+                        <div class="review-star-picker mb-2" id="newStarPicker">
+                            {% for i in range(1, 6) %}
+                            <i class="bi bi-star review-pick-star" data-value="{{ i }}"></i>
+                            {% endfor %}
+                        </div>
+                        <div class="review-rating-label mb-3 small text-warning fw-semibold" id="newRatingLabel">
+                            &nbsp;
+                        </div>
+                        <input type="hidden" id="newRatingInput" value="0">
+                        <input type="text" id="newTitleInput"
+                               class="form-control form-control-sm rounded-3 mb-2"
+                               placeholder="Review title (optional)" maxlength="120">
+                        <textarea id="newCommentInput"
+                                  class="form-control form-control-sm rounded-3 mb-2"
+                                  rows="3" placeholder="Share your experience…" maxlength="2000"></textarea>
+                        <div class="text-secondary mb-3" style="font-size:0.72rem;" id="charCount">0 / 2000</div>
+                        <button class="btn btn-primary w-100 rounded-3 fw-semibold"
+                                id="submitReviewBtn"
+                                data-url="{{ url_for('reviews.submit', product_id=product.id) }}">
+                            <i class="bi bi-send me-2"></i>Post Review
+                        </button>
+                    </div>
+
+                    {% else %}
+                    <!-- Logged in but no purchase -->
+                    <div class="card border-0 rounded-4 p-4 bg-purple-soft">
+                        <div class="d-flex gap-3 align-items-start">
+                            <i class="bi bi-bag-check-fill text-primary fs-4 flex-shrink-0 mt-1"></i>
+                            <div>
+                                <div class="fw-semibold small mb-1">Purchase Required</div>
+                                <p class="text-secondary small mb-2">Only verified buyers can leave a review.</p>
+                                <a href="{{ url_for('main.catalog') }}"
+                                   class="btn btn-primary btn-sm rounded-pill">Shop Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+                <!-- Not logged in -->
+                <div class="card border-0 rounded-4 p-4 bg-purple-soft">
+                    <div class="d-flex gap-3 align-items-start">
+                        <i class="bi bi-person-lock text-primary fs-4 flex-shrink-0 mt-1"></i>
+                        <div>
+                            <div class="fw-semibold small mb-1">Sign in to Review</div>
+                            <p class="text-secondary small mb-2">Log in and purchase this product to leave a review.</p>
+                            <a href="{{ url_for('auth.login') }}"
+                               class="btn btn-primary btn-sm rounded-pill">Log In</a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- ── RIGHT: review list ─────────────────────────────── -->
+            <div class="col-lg-8">
+
+                <!-- Inline alert area -->
+                <div id="reviewAlertWrap" class="mb-3"></div>
+
+                <div id="reviewList">
+                    {% if reviews %}
+                    {% for r in reviews %}
+                    <div class="review-card card border-0 shadow-sm rounded-4 mb-3" id="review-{{ r.id }}">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="review-avatar">{{ r.user.full_name[0].upper() }}</div>
+                                    <div>
+                                        <div class="fw-semibold small">{{ r.user.full_name }}</div>
+                                        <div class="text-secondary" style="font-size:0.72rem;">
+                                            {{ r.created_at.strftime("%d %b %Y") }}
+                                            {% if r.was_edited %}
+                                            <span class="ms-1 fst-italic">(edited)</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="review-star-display">
+                                        {% for i in range(1, 6) %}
+                                        <i class="bi bi-star-fill review-star {{ 'filled' if i <= r.rating }}"></i>
+                                        {% endfor %}
+                                    </span>
+                                    <span class="badge bg-warning-soft text-warning rounded-pill small px-2 py-1">
+                                        {{ r.rating_label }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% if r.title %}
+                            <div class="fw-semibold mb-1 small review-title">{{ r.title }}</div>
+                            {% endif %}
+                            {% if r.comment %}
+                            <p class="text-secondary small mb-0 lh-lg review-body">{{ r.comment }}</p>
+                            {% else %}
+                            <p class="text-secondary small mb-0 fst-italic">No written review.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5" id="noReviewsMsg">
+                        <i class="bi bi-chat-square-text fs-1 text-secondary opacity-40 d-block mb-3"></i>
+                        <p class="text-secondary">No reviews yet. Be the first to review this product!</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Show more -->
+                {% if reviews | length > 5 %}
+                <div class="text-center mt-2">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-4" id="showMoreBtn"
+                            data-shown="5">
+                        Show More Reviews
+                    </button>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    <div id="cartToast" class="toast align-items-center text-white border-0 rounded-3" role="alert">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold" id="cartToastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+<script src="{{ url_for('static', filename='js/reviews.js') }}"></script>
+<script>
+const qtyInput = document.getElementById("qtyInput");
+const maxQty   = parseInt(qtyInput?.max || "99");
+document.getElementById("qtyDown")?.addEventListener("click", function () {
+    const v = parseInt(qtyInput.value); if (v > 1) qtyInput.value = v - 1;
+});
+document.getElementById("qtyUp")?.addEventListener("click", function () {
+    const v = parseInt(qtyInput.value); if (v < maxQty) qtyInput.value = v + 1;
+});
+const carousel = document.getElementById("productCarousel");
+if (carousel) {
+    carousel.addEventListener("slide.bs.carousel", function (e) {
+        document.querySelectorAll(".detail-thumb").forEach(function (t, i) {
+            t.classList.toggle("detail-thumb--active", i === e.to);
+        });
+    });
+}
+</script>
+{% endblock %}

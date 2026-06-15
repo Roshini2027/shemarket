@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Your Cart — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <h4 class="fw-bold mb-0"><i class="bi bi-cart3 me-2 text-primary"></i>Your Cart</h4>
+        {% if cart and cart.items %}
+        <span class="badge bg-primary rounded-pill">{{ cart.items | sum(attribute='quantity') }} item{{ 's' if cart.items | sum(attribute='quantity') != 1 }}</span>
+        {% endif %}
+    </div>
+
+    {% if cart and cart.items %}
+    <div class="row g-4 align-items-start">
+
+        <!-- ── Cart Items ──────────────────────────────────────────── -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div id="cartItemsList">
+                    {% for item in cart.items %}
+                    <div class="cart-item d-flex gap-3 p-3 border-bottom" id="cart-item-{{ item.id }}">
+
+                        <!-- Image -->
+                        <a href="{{ url_for('main.product_detail', product_id=item.product.id) }}"
+                           class="flex-shrink-0">
+                            <img src="{{ item.product.primary_image_url }}"
+                                 alt="{{ item.product.name }}"
+                                 class="cart-item-img rounded-3 object-fit-cover">
+                        </a>
+
+                        <!-- Info -->
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div>
+                                    <a href="{{ url_for('main.product_detail', product_id=item.product.id) }}"
+                                       class="fw-semibold text-dark text-decoration-none cart-item-name">
+                                        {{ item.product.name }}
+                                    </a>
+                                    <div class="text-secondary small mt-1">
+                                        {{ item.product.business.name }}
+                                        {% if item.product.business.is_verified %}
+                                        <span class="verified-badge ms-1" style="font-size:0.6rem;padding:1px 6px;">
+                                            <i class="bi bi-patch-check-fill"></i> Verified
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% if item.product.category %}
+                                    <span class="badge bg-purple-soft text-primary rounded-pill small mt-1">
+                                        {{ item.product.category }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-primary cart-line-total"
+                                         id="line-total-{{ item.id }}">
+                                        ₹{{ "%.2f" | format(item.product.price | float * item.quantity) }}
+                                    </div>
+                                    <div class="text-secondary small">₹{{ "%.2f" | format(item.product.price | float) }} each</div>
+                                </div>
+                            </div>
+
+                            <!-- Quantity + Remove -->
+                            <div class="d-flex align-items-center gap-3 mt-3 flex-wrap">
+                                <div class="qty-stepper d-flex align-items-center border rounded-3 overflow-hidden">
+                                    <button type="button"
+                                            class="qty-btn btn btn-sm border-0 px-3 py-1"
+                                            data-item-id="{{ item.id }}"
+                                            data-action="dec">−</button>
+                                    <input type="number"
+                                           class="qty-input form-control form-control-sm border-0 text-center p-0"
+                                           value="{{ item.quantity }}"
+                                           min="1"
+                                           max="{{ item.product.stock_qty }}"
+                                           data-item-id="{{ item.id }}"
+                                           style="width:44px;">
+                                    <button type="button"
+                                            class="qty-btn btn btn-sm border-0 px-3 py-1"
+                                            data-item-id="{{ item.id }}"
+                                            data-action="inc"
+                                            data-max="{{ item.product.stock_qty }}">+</button>
+                                </div>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger rounded-3 remove-btn"
+                                        data-item-id="{{ item.id }}">
+                                    <i class="bi bi-trash3 me-1"></i>Remove
+                                </button>
+                                {% if item.product.stock_qty <= 5 %}
+                                <span class="text-warning small">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Only {{ item.product.stock_qty }} left
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
+
+                    <!-- Cart actions -->
+                    <div class="p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <a href="{{ url_for('main.catalog') }}"
+                           class="btn btn-outline-secondary btn-sm rounded-3">
+                            <i class="bi bi-arrow-left me-1"></i>Continue Shopping
+                        </a>
+                        <form action="{{ url_for('cart.clear_cart') }}" method="POST"
+                              onsubmit="return confirm('Clear your entire cart?')">
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-3">
+                                <i class="bi bi-trash3 me-1"></i>Clear Cart
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Order Summary ───────────────────────────────────────── -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 sticky-summary" id="orderSummary">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-4">Order Summary</h6>
+
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-secondary">Subtotal</span>
+                        <span class="fw-semibold" id="summarySubtotal">₹{{ "%.2f" | format(subtotal) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-secondary">
+                            Shipping
+                            {% if subtotal < 50 %}
+                            <span class="text-muted">(free over ₹50)</span>
+                            {% endif %}
+                        </span>
+                        <span class="fw-semibold" id="summaryShipping">
+                            {% if shipping == 0 %}<span class="text-success">Free</span>
+                            {% else %}₹{{ "%.2f" | format(shipping) }}{% endif %}
+                        </span>
+                    </div>
+
+                    {% if subtotal < 50 %}
+                    <div class="free-shipping-bar mb-3">
+                        <div class="d-flex justify-content-between small text-secondary mb-1">
+                            <span class="fw-bold">Add <strong>₹{{ "%.2f" | format(50 - subtotal) }}</strong> more for free shipping</span>
+                        </div>
+                        <div class="progress" style="height:5px;">
+                            <div class="progress-bar bg-success" id="shippingProgress"
+                                 style="width:{{ [(subtotal / 50 * 100), 100] | min }}%;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="fw-bold">Total</span>
+                        <span class="fw-bold fs-5 text-primary" id="summaryTotal">₹{{ "%.2f" | format(total) }}</span>
+                    </div>
+
+                    <a href="{{ url_for('checkout.checkout') }}"
+                       class="btn btn-primary w-100 rounded-3 fw-semibold">
+                        <i class="bi bi-lock me-2"></i>Proceed to Checkout
+                    </a>
+
+                    <!-- Trust signals -->
+                    <div class="mt-4 d-flex flex-column gap-2">
+                        <div class="d-flex align-items-center gap-2 text-secondary small">
+                            <i class="bi bi-shield-check text-success"></i>Secure checkout
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-secondary small">
+                            <i class="bi bi-arrow-counterclockwise text-primary"></i>Easy returns
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-secondary small">
+                            <i class="bi bi-patch-check-fill text-success"></i>Verified women-owned sellers
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /row -->
+
+    {% else %}
+    <!-- Empty Cart -->
+    <div class="text-center py-5">
+        <div class="empty-cart-icon mb-4">
+            <i class="bi bi-cart-x"></i>
+        </div>
+        <h5 class="fw-semibold mb-2">Your cart is empty</h5>
+        <p class="text-secondary mb-4">Looks like you haven't added anything yet.</p>
+        <a href="{{ url_for('main.catalog') }}" class="btn btn-primary px-5 rounded-pill fw-semibold">
+            <i class="bi bi-bag me-2"></i>Start Shopping
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Toast notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+    <div id="cartToast" class="toast align-items-center text-white border-0 rounded-3" role="alert">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold" id="cartToastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+{% endblock %}

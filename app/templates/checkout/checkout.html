@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Checkout — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:1100px;">
+
+    <!-- ── Progress bar ──────────────────────────────────────────── -->
+    <div class="checkout-progress d-flex align-items-center justify-content-center gap-0 mb-5">
+        <div class="checkout-step done">
+            <div class="checkout-step-circle"><i class="bi bi-cart3"></i></div>
+            <div class="checkout-step-label">Cart</div>
+        </div>
+        <div class="checkout-step-line done"></div>
+        <div class="checkout-step active">
+            <div class="checkout-step-circle"><i class="bi bi-truck"></i></div>
+            <div class="checkout-step-label">Shipping</div>
+        </div>
+        <div class="checkout-step-line"></div>
+        <div class="checkout-step">
+            <div class="checkout-step-circle"><i class="bi bi-check-lg"></i></div>
+            <div class="checkout-step-label">Confirmation</div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('checkout.place_order') }}" id="checkoutForm" novalidate>
+
+    <div class="row g-4 align-items-start">
+
+        <!-- ══════════════════════════════════════════════════════════
+             LEFT — Address + Payment
+        ══════════════════════════════════════════════════════════ -->
+        <div class="col-lg-7">
+
+            <!-- Shipping Address -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-4">
+                        <i class="bi bi-geo-alt-fill text-primary me-2"></i>Shipping Address
+                    </h6>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control rounded-3"
+                                   value="{{ (form.full_name if form else current_user.full_name) }}"
+                                   placeholder="Jane Doe" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control rounded-3"
+                                   value="{{ form.phone if form else current_user.phone or '' }}"
+                                   placeholder="+1 555 000 0000">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Street Address <span class="text-danger">*</span></label>
+                            <input type="text" name="street" class="form-control rounded-3"
+                                   value="{{ form.street if form else '' }}"
+                                   placeholder="123 Main Street, Apt 4B" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">City <span class="text-danger">*</span></label>
+                            <input type="text" name="city" class="form-control rounded-3"
+                                   value="{{ form.city if form else '' }}"
+                                   placeholder="Nairobi" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">State / Province</label>
+                            <input type="text" name="state" class="form-control rounded-3"
+                                   value="{{ form.state if form else '' }}"
+                                   placeholder="Central Province">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Postal / ZIP Code <span class="text-danger">*</span></label>
+                            <input type="text" name="postal_code" class="form-control rounded-3"
+                                   value="{{ form.postal_code if form else '' }}"
+                                   placeholder="00100" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Country <span class="text-danger">*</span></label>
+                            <input type="text" name="country" class="form-control rounded-3"
+                                   value="{{ form.country if form else '' }}"
+                                   placeholder="Kenya" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-4">
+                        <i class="bi bi-credit-card-2-front-fill text-primary me-2"></i>Payment Method
+                    </h6>
+
+                    <div class="d-flex flex-column gap-2">
+                        {% set methods = [
+                            ("credit_card",  "bi-credit-card-fill",        "Credit Card",    "Visa, Mastercard, RuPay…"),
+                            ("debit_card",   "bi-credit-card-2-back-fill", "Debit Card",     "Bank debit card + ATM PIN"),
+                            ("upi",          "bi-phone-fill",              "UPI",            "GPay, PhonePe, Paytm, BHIM"),
+                            ("net_banking",  "bi-bank2",                   "Net Banking",    "All major Indian banks"),
+                            ("wallet",       "bi-wallet2",                 "Wallet",         "Paytm, MobiKwik, Airtel Money"),
+                            ("cash_on_delivery", "bi-cash-coin",           "Cash on Delivery","Pay when your order arrives"),
+                        ] %}
+                        {% for val, icon, label, sub in methods %}
+                        <label class="pay-method-label d-flex align-items-center gap-3 p-3 border rounded-3
+                                      {{ 'pay-method-label--active' if (form and form.payment_method == val) or (not form and val == 'cash_on_delivery') }}">
+                            <input type="radio" name="payment_method" value="{{ val }}" class="pay-radio d-none"
+                                   {{ 'checked' if (form and form.payment_method == val) or (not form and val == 'cash_on_delivery') }}>
+                            <span class="pay-icon-wrap">
+                                <i class="bi {{ icon }} text-primary"></i>
+                            </span>
+                            <span class="flex-grow-1">
+                                <span class="fw-semibold small d-block">{{ label }}</span>
+                                <span class="text-secondary" style="font-size:0.75rem;">{{ sub }}</span>
+                            </span>
+                            <span class="pay-check-indicator"><i class="bi bi-check-circle-fill text-primary"></i></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════
+             RIGHT — Order Review + Summary
+        ══════════════════════════════════════════════════════════ -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 checkout-summary-sticky">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-bag-check-fill text-primary me-2"></i>Order Review
+                        <span class="badge bg-primary rounded-pill ms-2 fw-normal" style="font-size:0.7rem;">
+                            {{ cart.items | length }} item{{ 's' if cart.items | length != 1 }}
+                        </span>
+                    </h6>
+
+                    <!-- Item list -->
+                    <div class="checkout-item-list mb-3">
+                        {% for item in cart.items %}
+                        <div class="d-flex gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+                            <div class="position-relative flex-shrink-0">
+                                <img src="{{ item.product.primary_image_url }}"
+                                     alt="{{ item.product.name }}"
+                                     class="checkout-item-thumb rounded-3 object-fit-cover">
+                                <span class="checkout-qty-badge">{{ item.quantity }}</span>
+                            </div>
+                            <div class="flex-grow-1 min-w-0 d-flex flex-column justify-content-center">
+                                <div class="fw-semibold small text-dark text-truncate">{{ item.product.name }}</div>
+                                <div class="text-secondary" style="font-size:0.75rem;">{{ item.product.business.name }}</div>
+                            </div>
+                            <div class="text-end flex-shrink-0 d-flex align-items-center">
+                                <span class="fw-bold small text-primary">
+                                    ₹{{ "%.2f" | format(item.product.price | float * item.quantity) }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span class="text-secondary">Subtotal</span>
+                            <span class="fw-semibold">₹{{ "%.2f" | format(subtotal) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-3">
+                            <span class="text-secondary">
+                                Shipping
+                                {% if shipping == 0 %}
+                                <span class="badge bg-success-soft text-success rounded-pill ms-1" style="font-size:0.65rem;">FREE</span>
+                                {% endif %}
+                            </span>
+                            <span class="fw-semibold">
+                                {% if shipping == 0 %}
+                                <span class="text-success">Free</span>
+                                {% else %}
+                                ₹{{ "%.2f" | format(shipping) }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-4">
+                            <span class="fw-bold">Total</span>
+                            <span class="fw-bold fs-5 text-primary">₹{{ "%.2f" | format(total) }}</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 rounded-3 fw-bold py-2"
+                                id="placeOrderBtn">
+                            <i class="bi bi-lock-fill me-2"></i>Place Order
+                        </button>
+
+                        <div class="d-flex flex-column gap-2 mt-3">
+                            <div class="d-flex align-items-center gap-2 text-secondary small">
+                                <i class="bi bi-shield-check text-success"></i>Your information is secure
+                            </div>
+                            <div class="d-flex align-items-center gap-2 text-secondary small">
+                                <i class="bi bi-arrow-counterclockwise text-primary"></i>Free returns within 30 days
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /row -->
+    </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // ── Payment method visual toggle ──────────────────────────────
+    document.querySelectorAll(".pay-method-label").forEach(function (label) {
+        label.addEventListener("click", function () {
+            document.querySelectorAll(".pay-method-label").forEach(function (l) {
+                l.classList.remove("pay-method-label--active");
+            });
+            this.classList.add("pay-method-label--active");
+            this.querySelector(".pay-radio").checked = true;
+        });
+    });
+
+    // ── Client-side validation before submit ─────────────────────
+    document.getElementById("checkoutForm").addEventListener("submit", function (e) {
+        const required = this.querySelectorAll("[required]");
+        let ok = true;
+        required.forEach(function (el) {
+            el.classList.remove("is-invalid");
+            if (!el.value.trim()) {
+                el.classList.add("is-invalid");
+                ok = false;
+            }
+        });
+        if (!ok) {
+            e.preventDefault();
+            this.querySelector(".is-invalid")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
+        const btn = document.getElementById("placeOrderBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Placing Order…';
+    });
+})();
+</script>
+{% endblock %}

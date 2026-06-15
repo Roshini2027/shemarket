@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}My Orders — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:960px;">
+
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+        <div>
+            <h4 class="fw-bold mb-0"><i class="bi bi-bag-check-fill text-primary me-2"></i>My Orders</h4>
+            <p class="text-secondary small mb-0">Track and manage all your purchases</p>
+        </div>
+        <a href="{{ url_for('main.catalog') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="bi bi-bag me-1"></i>Shop More
+        </a>
+    </div>
+
+    <!-- Stats strip -->
+    {% set total_orders  = counts.all %}
+    {% set delivered_cnt = counts.get('delivered', 0) %}
+    {% set pending_cnt   = counts.get('pending', 0) + counts.get('confirmed', 0) + counts.get('processing', 0) %}
+    <div class="row g-3 mb-4">
+        {% for label, val, color, icon in [
+            ("Total Orders",   total_orders,  "primary", "bi-receipt-cutoff"),
+            ("In Progress",    pending_cnt,   "warning", "bi-arrow-repeat"),
+            ("Delivered",      delivered_cnt, "success", "bi-house-check-fill"),
+            ("Cancelled",      counts.get('cancelled',0), "danger",  "bi-x-circle"),
+        ] %}
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center order-stat-card">
+                <i class="bi {{ icon }} text-{{ color }} fs-4 mb-1"></i>
+                <div class="fw-bold fs-5 text-{{ color }}">{{ val }}</div>
+                <div class="text-secondary small">{{ label }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Status filter tabs -->
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        {% set tabs = [
+            ("all",        "All",        "secondary"),
+            ("pending",    "Pending",    "warning"),
+            ("confirmed",  "Confirmed",  "primary"),
+            ("processing", "Processing", "info"),
+            ("shipped",    "Shipped",    "primary"),
+            ("delivered",  "Delivered",  "success"),
+            ("cancelled",  "Cancelled",  "danger"),
+        ] %}
+        {% for val, label, color in tabs %}
+        {% set cnt = counts.get(val, counts.all if val == 'all' else 0) %}
+        <a href="{{ url_for('orders.my_orders', status=val) }}"
+           class="btn btn-sm rounded-pill px-3 {{ 'btn-' + color if status_filter == val else 'btn-outline-' + color }}">
+            {{ label }}
+            {% if cnt %}<span class="badge bg-white text-{{ color }} ms-1 rounded-pill">{{ cnt }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Orders list -->
+    {% if orders %}
+    <div class="d-flex flex-column gap-3">
+        {% for order in orders %}
+        {% set sc, si, sl = order.status_badge %}
+        {% set pc, pi, pl = order.payment_status_label %}
+        <div class="card border-0 shadow-sm rounded-4 order-row">
+            <!-- Header row -->
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold">{{ order.order_number_display }}</span>
+                            <span class="badge rounded-pill bg-{{ sc }}-soft text-{{ sc }} px-2 py-1 small">
+                                <i class="bi {{ si }} me-1"></i>{{ sl }}
+                            </span>
+                            <span class="badge rounded-pill bg-{{ pc }}-soft text-{{ pc }} px-2 py-1 small">
+                                <i class="bi {{ pi }} me-1"></i>{{ pl }}
+                            </span>
+                        </div>
+                        <div class="text-secondary small mt-1">
+                            Placed {{ order.created_at.strftime("%d %b %Y, %I:%M %p") }}
+                            · {{ order.items | length }} item{{ 's' if order.items | length != 1 }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold fs-5 text-primary">₹{{ "%.2f" | format(order.total_amount | float) }}</div>
+                        {% if order.payment and order.payment.transaction_id %}
+                        <div class="text-secondary font-monospace" style="font-size:0.72rem;">
+                            {{ order.payment.transaction_id }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Thumbnail strip -->
+                <div class="d-flex gap-2 mb-3 flex-wrap">
+                    {% for item in order.items[:5] %}
+                    <div class="position-relative">
+                        <img src="{{ item.product.primary_image_url }}"
+                             alt="{{ item.product.name }}"
+                             class="order-thumb rounded-3 object-fit-cover"
+                             title="{{ item.product.name }}">
+                        <span class="order-thumb-qty">{{ item.quantity }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if order.items | length > 5 %}
+                    <div class="order-thumb rounded-3 bg-purple-soft d-flex align-items-center justify-content-center text-primary fw-semibold small">
+                        +{{ order.items | length - 5 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Mini tracking bar -->
+                {% if order.pipeline_index >= 0 %}
+                <div class="order-mini-track d-flex align-items-center gap-0 mb-3">
+                    {% set stages = [("Placed","bi-check"),("Confirmed","bi-check-circle"),("Processing","bi-arrow-repeat"),("Shipped","bi-truck"),("Delivered","bi-house-check")] %}
+                    {% for stage_label, stage_icon in stages %}
+                    {% set idx = loop.index0 %}
+                    <div class="order-mini-step {{ 'done' if idx <= order.pipeline_index else '' }}"
+                         title="{{ stage_label }}">
+                        <i class="bi {{ stage_icon }}"></i>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="order-mini-line {{ 'done' if idx < order.pipeline_index else '' }}"></div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('orders.order_detail', order_id=order.id) }}"
+                       class="btn btn-primary btn-sm rounded-pill px-3">
+                        <i class="bi bi-eye me-1"></i>View Details
+                    </a>
+                    {% if order.payment and order.payment.status.value == 'completed' %}
+                    <a href="{{ url_for('payment.payment_success', order_id=order.id) }}"
+                       class="btn btn-outline-success btn-sm rounded-pill px-3">
+                        <i class="bi bi-receipt me-1"></i>Receipt
+                    </a>
+                    {% elif order.payment and order.payment.status.value == 'pending' %}
+                    <a href="{{ url_for('payment.payment_page', order_id=order.id) }}"
+                       class="btn btn-warning btn-sm rounded-pill px-3 text-dark">
+                        <i class="bi bi-play-fill me-1"></i>Pay Now
+                    </a>
+                    {% endif %}
+                    {% if order.can_cancel %}
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                            data-bs-toggle="modal"
+                            data-bs-target="#cancelModal{{ order.id }}">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Cancel confirmation modal -->
+        {% if order.can_cancel %}
+        <div class="modal fade" id="cancelModal{{ order.id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow">
+                    <div class="modal-body p-4 text-center">
+                        <div class="mb-3">
+                            <div class="cancel-modal-icon mx-auto mb-3">
+                                <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                            </div>
+                            <h6 class="fw-bold">Cancel Order?</h6>
+                            <p class="text-secondary small mb-0">
+                                Cancel <strong>{{ order.order_number_display }}</strong>?
+                                Stock will be restored.
+                            </p>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                    data-bs-dismiss="modal">Keep Order</button>
+                            <form method="POST"
+                                  action="{{ url_for('orders.cancel_order', order_id=order.id) }}">
+                                <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3">
+                                    Yes, Cancel
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="text-center py-5">
+        <div class="empty-cart-icon mb-4" style="font-size:2rem;">
+            <i class="bi bi-bag-x"></i>
+        </div>
+        <h5 class="fw-semibold mb-2">No orders found</h5>
+        <p class="text-secondary mb-4">
+            {% if status_filter != 'all' %}No {{ status_filter }} orders.
+            {% else %}You haven't placed any orders yet.{% endif %}
+        </p>
+        <a href="{{ url_for('main.catalog') }}"
+           class="btn btn-primary px-5 rounded-pill fw-semibold">
+            <i class="bi bi-bag me-2"></i>Start Shopping
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- ── Recommendations ──────────────────────────────────────────── -->
+    {% if recs %}
+
+    {% if recs.similar %}
+    <div class="mt-5 pt-2">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold mb-0"><i class="bi bi-stars text-primary me-2"></i>Recommended For You</h5>
+                <p class="text-secondary small mb-0">Based on your shopping activity</p>
+            </div>
+            <a href="{{ url_for('main.catalog') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.similar %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recs.trending %}
+    <div class="mt-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Trending Now</h5>
+            <a href="{{ url_for('main.catalog', sort='newest') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.trending %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recs.women_owned %}
+    <div class="mt-5 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 mb-1 d-inline-block">
+                    <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned
+                </span>
+                <h5 class="fw-bold mb-0">Women-Owned Picks</h5>
+            </div>
+            <a href="{{ url_for('main.catalog', verified='1') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.women_owned %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Sellers{% endblock %}
+{% block page_title %}<i class="bi bi-shop me-2 text-primary"></i>Seller Management{% endblock %}
+
+{% block content %}
+
+<!-- ── Stat strip ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    {% for label, value, color in [
+        ("Total Sellers",    counts.total,     "primary"),
+        ("Verified",         counts.verified,  "success"),
+        ("Pending",          counts.pending,   "warning"),
+        ("Rejected",         counts.rejected,  "danger"),
+        ("Suspended",        counts.suspended, "secondary"),
+    ] %}
+    <div class="col-6 col-md">
+        <div class="card border-0 shadow-sm rounded-4 p-3 text-center">
+            <div class="fw-bold fs-5 text-{{ color }}">{{ value }}</div>
+            <div class="text-secondary small">{{ label }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ── Filters ────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <input type="text" name="q" value="{{ q }}"
+                       class="form-control form-control-sm rounded-3"
+                       placeholder="Search business name or owner…">
+            </div>
+            <div class="col-6 col-md-3">
+                <select name="status" class="form-select form-select-sm rounded-3">
+                    <option value="">All Statuses</option>
+                    {% for val, lbl in [
+                        ("pending_verification","Pending"),
+                        ("verified","Verified"),
+                        ("rejected","Rejected"),
+                        ("suspended","Suspended"),
+                    ] %}
+                    <option value="{{ val }}" {{ 'selected' if status == val }}>{{ lbl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-3 px-3">
+                    <i class="bi bi-search me-1"></i>Filter
+                </button>
+                <a href="{{ url_for('admin.sellers_list') }}" class="btn btn-outline-secondary btn-sm rounded-3">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Table ──────────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4 py-3 text-secondary small fw-semibold">Business</th>
+                    <th class="py-3 text-secondary small fw-semibold">Owner</th>
+                    <th class="py-3 text-secondary small fw-semibold">Category</th>
+                    <th class="py-3 text-secondary small fw-semibold">Products</th>
+                    <th class="py-3 text-secondary small fw-semibold">Status</th>
+                    <th class="pe-4 py-3 text-secondary small fw-semibold text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for biz in businesses %}
+                {% set bc, bl = biz.status_badge %}
+                <tr class="admin-table-row">
+                    <td class="ps-4 py-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ biz.logo_url }}" alt="{{ biz.name }}"
+                                 class="rounded-2 flex-shrink-0" style="width:40px;height:40px;object-fit:cover;">
+                            <div>
+                                <div class="fw-semibold small">{{ biz.name }}</div>
+                                <div class="text-secondary" style="font-size:0.7rem;">
+                                    {{ biz.verification_documents|length }}/3 docs
+                                    {% if biz.is_verified %}
+                                    <i class="bi bi-patch-check-fill text-success ms-1"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3">
+                        <div class="small fw-semibold">{{ biz.owner.full_name }}</div>
+                        <div class="text-secondary" style="font-size:0.7rem;">{{ biz.owner.email }}</div>
+                    </td>
+                    <td class="py-3 text-secondary small">{{ biz.category or "—" }}</td>
+                    <td class="py-3 text-center">
+                        <span class="badge bg-purple-soft text-primary rounded-pill small">{{ biz.products|length }}</span>
+                    </td>
+                    <td class="py-3">
+                        <span class="badge bg-{{ bc }}-soft text-{{ bc }} rounded-pill small">{{ bl }}</span>
+                    </td>
+                    <td class="pe-4 py-3 text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="{{ url_for('admin.verification_detail', business_id=biz.id) }}"
+                               class="btn btn-sm btn-outline-primary rounded-3 px-2 py-1">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if biz.status.value != 'suspended' %}
+                            <form method="POST" action="{{ url_for('admin.suspend_seller', business_id=biz.id) }}" class="d-inline"
+                                  onsubmit="return confirm('Suspend {{ biz.name }}? Their products will be hidden.')">
+                                <button type="submit" class="btn btn-sm btn-outline-warning rounded-3 px-2 py-1">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="{{ url_for('admin.reinstate_seller', business_id=biz.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success rounded-3 px-2 py-1">
+                                    <i class="bi bi-play-circle"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-secondary">
+                        <i class="bi bi-shop fs-2 d-block mb-2 opacity-40"></i>No sellers found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+        <span class="text-secondary small">{{ pagination.total }} seller{{ 's' if pagination.total != 1 }}</span>
+        <nav>
+            <ul class="pagination pagination-sm pagination-she mb-0 gap-1">
+                {% if pagination.has_prev %}
+                <li class="page-item"><a class="page-link rounded-2" href="{{ url_for('admin.sellers_list', page=pagination.prev_num, q=q, status=status) }}">‹</a></li>
+                {% endif %}
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <li class="page-item {{ 'active' if p == pagination.page }}">
+                    <a class="page-link rounded-2" href="{{ url_for('admin.sellers_list', page=p, q=q, status=status) }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                <li class="page-item"><a class="page-link rounded-2" href="{{ url_for('admin.sellers_list', page=pagination.next_num, q=q, status=status) }}">›</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

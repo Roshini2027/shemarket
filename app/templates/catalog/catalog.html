@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}
+    {% if q %}Results for "{{ q }}"
+    {% elif category %}{{ category }}
+    {% elif verified == '1' %}Verified Products
+    {% else %}Shop All Products{% endif %} — SheMarket
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4 py-5">
+<div class="row g-4">
+
+    <!-- ════════════════════════════════════════════════════════════
+         SIDEBAR
+    ════════════════════════════════════════════════════════════ -->
+    <div class="col-lg-3 d-none d-lg-block">
+        {% include "catalog/_sidebar.html" %}
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         MAIN CONTENT
+    ════════════════════════════════════════════════════════════ -->
+    <div class="col-lg-9">
+
+        <!-- Top bar -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h5 class="fw-bold mb-0">
+                    {% if q %}Results for "<em>{{ q }}</em>"
+                    {% elif category %}{{ category }}
+                    {% elif verified == '1' %}<i class="bi bi-patch-check-fill text-success me-2"></i>Verified Products
+                    {% else %}All Products{% endif %}
+                </h5>
+                <p class="text-secondary small mb-0">{{ total }} product{{ 's' if total != 1 }}</p>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <!-- Mobile filter button -->
+                <button class="btn btn-outline-secondary btn-sm rounded-3 d-lg-none"
+                        data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+                    <i class="bi bi-sliders me-1"></i>Filters
+                    {% if active_filters %}<span class="badge bg-primary rounded-pill ms-1">{{ active_filters | length }}</span>{% endif %}
+                </button>
+
+                <!-- Sort -->
+                <form method="GET" action="{{ url_for('main.catalog') }}" id="sortForm">
+                    <input type="hidden" name="q"         value="{{ q }}">
+                    <input type="hidden" name="seller"    value="{{ seller_q }}">
+                    <input type="hidden" name="category"  value="{{ category }}">
+                    <input type="hidden" name="verified"  value="{{ verified }}">
+                    <input type="hidden" name="price_min" value="{{ price_min }}">
+                    <input type="hidden" name="price_max" value="{{ price_max }}">
+                    <input type="hidden" name="rating"    value="{{ rating_min }}">
+                    <select name="sort" class="form-select form-select-sm rounded-3 sort-select"
+                            onchange="this.form.submit()" style="min-width:160px;">
+                        {% for val, label in [
+                            ("newest",     "Newest First"),
+                            ("price_asc",  "Price: Low → High"),
+                            ("price_desc", "Price: High → Low"),
+                            ("rating_desc","Top Rated"),
+                            ("name_asc",   "Name: A–Z"),
+                        ] %}
+                        <option value="{{ val }}" {{ "selected" if sort == val }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <!-- Active filter chips -->
+        {% if active_filters %}
+        <div class="d-flex flex-wrap gap-2 mb-3" id="activeChips">
+            {% for chip in active_filters %}
+            <span class="filter-chip">
+                {{ chip.label }}
+                <a href="{{ url_for('main.catalog',
+                    q         = q         if chip.key != 'q'        else '',
+                    seller    = seller_q  if chip.key != 'seller'   else '',
+                    category  = category  if chip.key != 'category' else '',
+                    verified  = verified  if chip.key != 'verified' else '',
+                    price_min = price_min if chip.key != 'price'    else '',
+                    price_max = price_max if chip.key != 'price'    else '',
+                    rating    = rating_min if chip.key != 'rating'  else '',
+                    sort      = sort) }}"
+                   class="ms-1 text-decoration-none chip-remove" aria-label="Remove {{ chip.label }}">
+                    <i class="bi bi-x"></i>
+                </a>
+            </span>
+            {% endfor %}
+            <a href="{{ url_for('main.catalog') }}" class="filter-chip filter-chip--clear">
+                <i class="bi bi-x-circle me-1"></i>Clear All
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Product grid -->
+        {% if products %}
+        <div class="row g-3" id="productGrid">
+            {% for product in products %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <nav class="mt-5 d-flex justify-content-center" aria-label="Products">
+            <ul class="pagination pagination-she gap-1 flex-wrap">
+                <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                    <a class="page-link rounded-3"
+                       href="{{ url_for('main.catalog', q=q, seller=seller_q, category=category, verified=verified,
+                                price_min=price_min, price_max=price_max, rating=rating_min, sort=sort,
+                                page=pagination.prev_num) if pagination.has_prev else '#' }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == pagination.page }}">
+                        <a class="page-link rounded-3"
+                           href="{{ url_for('main.catalog', q=q, seller=seller_q, category=category, verified=verified,
+                                    price_min=price_min, price_max=price_max, rating=rating_min, sort=sort, page=p) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-3">&hellip;</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                    <a class="page-link rounded-3"
+                       href="{{ url_for('main.catalog', q=q, seller=seller_q, category=category, verified=verified,
+                                price_min=price_min, price_max=price_max, rating=rating_min, sort=sort,
+                                page=pagination.next_num) if pagination.has_next else '#' }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-search fs-1 text-secondary opacity-40 d-block mb-3"></i>
+            <h5 class="fw-semibold">No products found</h5>
+            <p class="text-secondary small mb-3">Try adjusting your search terms or filters.</p>
+            <a href="{{ url_for('main.catalog') }}" class="btn btn-primary btn-sm rounded-pill px-4">
+                <i class="bi bi-x-circle me-1"></i>Clear All Filters
+            </a>
+        </div>
+        {% endif %}
+
+    </div><!-- /col main -->
+</div><!-- /row -->
+</div><!-- /container -->
+
+<!-- Mobile offcanvas -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="filterOffcanvas">
+    <div class="offcanvas-header border-bottom">
+        <h6 class="offcanvas-title fw-bold"><i class="bi bi-sliders me-2"></i>Filters</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-3">
+        {% include "catalog/_sidebar.html" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

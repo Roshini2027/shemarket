@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}SheMarket — Support Women-Owned Businesses{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero ──────────────────────────────────────────────────────── -->
+<section class="hero-section text-white d-flex align-items-center">
+    <div class="container text-center py-5">
+        <span class="badge bg-white text-primary fw-semibold px-3 py-2 rounded-pill mb-3 d-inline-block">
+            <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned Businesses
+        </span>
+        <h1 class="display-4 fw-bold mb-3">Shop with Purpose</h1>
+        <p class="lead mb-4 opacity-90">Discover verified women-owned businesses and support inclusive entrepreneurship.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{{ url_for('main.catalog') }}" class="btn btn-light btn-lg text-primary fw-semibold px-4">
+                <i class="bi bi-bag me-2"></i>Shop Now
+            </a>
+            <a href="{{ url_for('main.catalog', verified='1') }}" class="btn btn-outline-light btn-lg px-4">
+                <i class="bi bi-patch-check me-2"></i>Verified Only
+            </a>
+        </div>
+
+        <!-- Hero search -->
+        <form class="mt-5 d-flex justify-content-center" action="{{ url_for('main.catalog') }}" method="GET">
+            <div class="hero-search d-flex rounded-pill overflow-hidden shadow-lg">
+                <input type="text" name="q" class="form-control border-0 rounded-0 ps-4"
+                       placeholder="Search products, categories…" style="min-width:260px;">
+                <button class="btn btn-light text-primary fw-semibold px-4 rounded-0" type="submit">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- ── Category Pills ─────────────────────────────────────────────── -->
+<section class="py-4 bg-white border-bottom">
+    <div class="container">
+        <div class="d-flex gap-2 flex-wrap justify-content-center">
+            {% set cats = [
+                ("Fashion & Apparel",     "bi-bag"),
+                ("Beauty & Wellness",     "bi-stars"),
+                ("Food & Beverages",      "bi-cup-hot"),
+                ("Health & Fitness",      "bi-heart-pulse"),
+                ("Home & Decor",          "bi-house"),
+                ("Crafts & Handmade",     "bi-scissors"),
+                ("Technology",            "bi-cpu"),
+                ("Education & Coaching",  "bi-book"),
+            ] %}
+            {% for cat, icon in cats %}
+            <a href="{{ url_for('main.catalog', category=cat) }}"
+               class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                <i class="bi {{ icon }} me-1"></i>{{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ── Featured Products ──────────────────────────────────────────── -->
+{% if featured %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h2 class="fw-bold mb-0">New Arrivals</h2>
+                <p class="text-secondary mb-0 small">Fresh products from our sellers</p>
+            </div>
+            <a href="{{ url_for('main.catalog', sort='newest') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in featured %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if recs %}
+
+<!-- ── Recommended For You ───────────────────────────────────────── -->
+{% if recs.similar %}
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h2 class="fw-bold mb-0"><i class="bi bi-stars text-primary me-2"></i>Recommended For You</h2>
+                <p class="text-secondary mb-0 small">Based on your browsing history</p>
+            </div>
+            <a href="{{ url_for('main.catalog') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.similar %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ── Trending Products ─────────────────────────────────────────── -->
+{% if recs.trending %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h2 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Trending Now</h2>
+                <p class="text-secondary mb-0 small">Most popular products this month</p>
+            </div>
+            <a href="{{ url_for('main.catalog', sort='newest') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.trending %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ── Women-Owned Picks ─────────────────────────────────────────── -->
+{% if recs.women_owned %}
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 mb-2 d-inline-block">
+                    <i class="bi bi-patch-check-fill me-1"></i>Verified Women-Owned
+                </span>
+                <h2 class="fw-bold mb-0">Women-Owned Picks</h2>
+                <p class="text-secondary mb-0 small">Handpicked from verified women-owned businesses</p>
+            </div>
+            <a href="{{ url_for('main.catalog', verified='1') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                View All <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        <div class="row g-3">
+            {% for product in recs.women_owned %}
+            {% include "catalog/_product_card.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% endif %}
+
+<!-- ── Why SheMarket ──────────────────────────────────────────────── -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Why SheMarket?</h2>
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 p-4">
+                    <i class="bi bi-patch-check-fill text-primary fs-1 mb-3"></i>
+                    <h5 class="fw-semibold">Verified Businesses</h5>
+                    <p class="text-secondary small">Every business is verified as women-owned before listing.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 p-4">
+                    <i class="bi bi-search text-primary fs-1 mb-3"></i>
+                    <h5 class="fw-semibold">Easy Discovery</h5>
+                    <p class="text-secondary small">Browse by category, keyword or verified status.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 p-4">
+                    <i class="bi bi-heart-fill text-primary fs-1 mb-3"></i>
+                    <h5 class="fw-semibold">Community Impact</h5>
+                    <p class="text-secondary small">Every purchase supports women entrepreneurs directly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────────────────── -->
+<section class="py-5 bg-primary text-white text-center">
+    <div class="container">
+        <h3 class="fw-bold mb-3">Own a Women-Owned Business?</h3>
+        <p class="mb-4 opacity-90">Join hundreds of entrepreneurs already growing with SheMarket.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-light text-primary fw-semibold btn-lg px-5">
+            Get Listed Today
+        </a>
+    </div>
+</section>
+
+{% endblock %}

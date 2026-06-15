@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}My Products — SheMarket{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <span class="badge bg-purple-soft text-primary fw-semibold px-3 py-2 rounded-pill mb-2">
+                    <i class="bi bi-box-seam me-1"></i>Products
+                </span>
+                <h2 class="fw-bold mb-0">My Products</h2>
+                <p class="text-secondary mb-0">{{ business.name }}</p>
+            </div>
+            <a href="{{ url_for('products.add_product') }}" class="btn btn-primary fw-semibold">
+                <i class="bi bi-plus-lg me-2"></i>Add Product
+            </a>
+        </div>
+
+        <!-- Status tabs -->
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            {% set tabs = [
+                ("all",          "All",          "secondary", counts.all),
+                ("active",       "Active",       "success",   counts.active),
+                ("inactive",     "Inactive",     "secondary", counts.inactive),
+                ("out_of_stock", "Out of Stock", "warning",   counts.out_of_stock),
+            ] %}
+            {% for val, label, color, count in tabs %}
+            <a href="{{ url_for('products.list_products', status=val) }}"
+               class="btn btn-sm rounded-pill px-3 {{ 'btn-' + color if status_filter == val else 'btn-outline-' + color }}">
+                {{ label }}
+                <span class="badge bg-white text-{{ color }} ms-1 rounded-pill">{{ count }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if products %}
+
+        <!-- Product grid -->
+        <div class="row g-3">
+            {% for product in products %}
+            {% set sc, sl = product.status_badge %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 product-list-row">
+                    <div class="card-body p-3 d-flex align-items-center gap-3 flex-wrap">
+
+                        <!-- Thumbnail -->
+                        <div class="position-relative flex-shrink-0">
+                            <img src="{{ product.primary_image_url }}"
+                                 alt="{{ product.name }}"
+                                 class="product-list-thumb rounded-3">
+                            {% if product.business.is_verified %}
+                            <span class="product-verified-badge">
+                                <i class="bi bi-patch-check-fill"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                <span class="fw-semibold text-dark text-truncate">{{ product.name }}</span>
+                                <span class="badge bg-{{ sc }} rounded-pill">{{ sl }}</span>
+                            </div>
+                            <div class="text-secondary small">
+                                {{ product.category }} &bull;
+                                {{ product.images | length }} image{{ 's' if product.images | length != 1 }} &bull;
+                                Added {{ product.created_at.strftime("%b %d, %Y") }}
+                            </div>
+                        </div>
+
+                        <!-- Price / Qty -->
+                        <div class="text-end flex-shrink-0 d-none d-md-block">
+                            <div class="fw-bold text-primary fs-5">₹{{ "%.2f" | format(product.price | float) }}</div>
+                            <div class="text-secondary small">Qty: {{ product.stock_qty }}</div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex gap-2 flex-shrink-0">
+                            <a href="{{ url_for('products.edit_product', product_id=product.id) }}"
+                               class="btn btn-outline-primary btn-sm rounded-3">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm rounded-3"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal"
+                                    data-product-id="{{ product.id }}"
+                                    data-product-name="{{ product.name }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-box-seam fs-1 text-secondary opacity-40"></i>
+            <p class="text-secondary mt-3 mb-1">No products found.</p>
+            <a href="{{ url_for('products.add_product') }}" class="btn btn-primary btn-sm mt-2">
+                <i class="bi bi-plus-lg me-1"></i>Add your first product
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Delete Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-0">
+                    Are you sure you want to delete <strong id="deleteProductName"></strong>?
+                    This will also remove all its images and cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn btn-danger rounded-3 fw-semibold">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById("deleteModal").addEventListener("show.bs.modal", function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById("deleteProductName").textContent = btn.dataset.productName;
+    document.getElementById("deleteForm").action =
+        "/seller/products/" + btn.dataset.productId + "/delete";
+});
+</script>
+{% endblock %}

@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.order_number_display }} — SheMarket{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:1000px;">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-4" aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('main.index') }}" class="text-decoration-none text-secondary">Home</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('orders.my_orders') }}" class="text-decoration-none text-secondary">My Orders</a>
+            </li>
+            <li class="breadcrumb-item active">{{ order.order_number_display }}</li>
+        </ol>
+    </nav>
+
+    <!-- Page title -->
+    {% set sc, si, sl = order.status_badge %}
+    {% set pc, pi, pl = order.payment_status_label %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">
+                <i class="bi bi-receipt text-primary me-2"></i>{{ order.order_number_display }}
+            </h4>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge rounded-pill bg-{{ sc }}-soft text-{{ sc }} px-3 py-2">
+                    <i class="bi {{ si }} me-1"></i>{{ sl }}
+                </span>
+                <span class="badge rounded-pill bg-{{ pc }}-soft text-{{ pc }} px-3 py-2">
+                    <i class="bi {{ pi }} me-1"></i>Payment: {{ pl }}
+                </span>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if order.payment and order.payment.status.value == 'pending' %}
+            <a href="{{ url_for('payment.payment_page', order_id=order.id) }}"
+               class="btn btn-warning btn-sm rounded-pill px-3 text-dark fw-semibold">
+                <i class="bi bi-play-fill me-1"></i>Pay Now
+            </a>
+            {% endif %}
+            {% if order.payment and order.payment.status.value == 'completed' %}
+            <a href="{{ url_for('payment.payment_success', order_id=order.id) }}"
+               class="btn btn-outline-success btn-sm rounded-pill px-3">
+                <i class="bi bi-receipt me-1"></i>View Receipt
+            </a>
+            {% endif %}
+            {% if order.can_cancel %}
+            <button class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                    data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="bi bi-x-circle me-1"></i>Cancel Order
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Order Tracking Timeline ─────────────────────────────── -->
+    {% if order.pipeline_index >= 0 %}
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <h6 class="fw-bold mb-4"><i class="bi bi-map text-primary me-2"></i>Order Tracking</h6>
+
+            <div class="order-timeline d-flex align-items-start">
+                {% set stage_meta = [
+                    ("Order Placed",  "bi-bag-check",          "Your order was received."),
+                    ("Confirmed",     "bi-check-circle-fill",  "Seller confirmed your order."),
+                    ("Processing",    "bi-arrow-repeat",        "Seller is preparing your order."),
+                    ("Shipped",       "bi-truck",               "Your order is on its way."),
+                    ("Delivered",     "bi-house-check-fill",   "Order delivered successfully!"),
+                ] %}
+                {% for stage_label, stage_icon, stage_desc in stage_meta %}
+                {% set idx = loop.index0 %}
+                {% set is_done    = idx <= order.pipeline_index %}
+                {% set is_current = idx == order.pipeline_index %}
+                <div class="order-timeline-step flex-fill">
+                    <div class="order-timeline-node {{ 'done' if is_done }} {{ 'current' if is_current }}">
+                        <i class="bi {{ stage_icon }}"></i>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="order-timeline-line {{ 'done' if idx < order.pipeline_index }}"></div>
+                    {% endif %}
+                    <div class="order-timeline-label mt-2 text-center small">
+                        <div class="fw-semibold {{ 'text-primary' if is_current else ('text-success' if is_done else 'text-secondary') }}">
+                            {{ stage_label }}
+                        </div>
+                        {% if is_current %}
+                        <div class="text-secondary" style="font-size:0.7rem;">{{ stage_desc }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% elif order.status.value == 'cancelled' %}
+    <div class="alert alert-danger border-0 rounded-4 d-flex gap-3 mb-4">
+        <i class="bi bi-x-circle-fill fs-4 flex-shrink-0 mt-1"></i>
+        <div>
+            <strong>Order Cancelled</strong>
+            <p class="mb-0 small">This order has been cancelled. Stock has been restored.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+
+        <!-- ── Items ──────────────────────────────────────────── -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    <div class="p-4 pb-2">
+                        <h6 class="fw-bold">
+                            <i class="bi bi-bag text-primary me-2"></i>
+                            Items ({{ order.items | length }})
+                        </h6>
+                    </div>
+
+                    {% for item in order.items %}
+                    <div class="d-flex gap-3 px-4 py-3 {% if not loop.last %}border-bottom{% endif %}">
+                        <a href="{{ url_for('main.product_detail', product_id=item.product.id) }}"
+                           class="flex-shrink-0">
+                            <img src="{{ item.product.primary_image_url }}"
+                                 alt="{{ item.product.name }}"
+                                 class="order-detail-thumb rounded-3 object-fit-cover">
+                        </a>
+                        <div class="flex-grow-1 min-w-0">
+                            <a href="{{ url_for('main.product_detail', product_id=item.product.id) }}"
+                               class="fw-semibold small text-dark text-decoration-none d-block">
+                                {{ item.product.name }}
+                            </a>
+                            <div class="text-secondary small mt-1">
+                                {{ item.product.business.name }}
+                                {% if item.product.business.is_verified %}
+                                <span class="verified-badge ms-1" style="font-size:0.58rem;padding:1px 5px;">
+                                    <i class="bi bi-patch-check-fill"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if item.product.category %}
+                            <span class="badge bg-purple-soft text-primary rounded-pill small mt-1">
+                                {{ item.product.category }}
+                            </span>
+                            {% endif %}
+                            <div class="text-secondary small mt-1">
+                                Qty {{ item.quantity }} × ₹{{ "%.2f" | format(item.unit_price | float) }}
+                            </div>
+                        </div>
+                        <div class="text-end flex-shrink-0 d-flex align-items-center">
+                            <span class="fw-bold text-primary">₹{{ "%.2f" | format(item.line_total) }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Totals -->
+                    <div class="px-4 py-3 border-top bg-light rounded-bottom-4">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-secondary">Subtotal</span>
+                            <span>₹{{ "%.2f" | format(order.subtotal) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span class="text-secondary">Shipping</span>
+                            <span>{% if order.shipping_cost <= 0 %}<span class="text-success">Free</span>{% else %}₹{{ "%.2f" | format(order.shipping_cost) }}{% endif %}</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Total</span>
+                            <span class="text-primary">₹{{ "%.2f" | format(order.total_amount | float) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Side panel ──────────────────────────────────────── -->
+        <div class="col-lg-5">
+
+            <!-- Order info -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Order Info</h6>
+                    <dl class="mb-0">
+                        {% set info_rows = [
+                            ("Order Number",  order.order_number_display, "fw-bold"),
+                            ("Placed On",     order.created_at.strftime("%d %b %Y, %I:%M %p"), ""),
+                            ("Last Updated",  order.updated_at.strftime("%d %b %Y, %I:%M %p"), ""),
+                        ] %}
+                        {% for lbl, val, cls in info_rows %}
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <dt class="text-secondary fw-normal small">{{ lbl }}</dt>
+                            <dd class="mb-0 small {{ cls }}">{{ val }}</dd>
+                        </div>
+                        {% endfor %}
+                        <div class="d-flex justify-content-between py-2">
+                            <dt class="text-secondary fw-normal small">Status</dt>
+                            <dd class="mb-0">
+                                <span class="badge rounded-pill bg-{{ sc }}-soft text-{{ sc }} px-2 py-1 small">
+                                    <i class="bi {{ si }} me-1"></i>{{ sl }}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Payment info -->
+            {% if order.payment %}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-credit-card text-primary me-2"></i>Payment</h6>
+                    <dl class="mb-0">
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <dt class="text-secondary fw-normal small">Method</dt>
+                            <dd class="mb-0 small fw-semibold">{{ order.payment.method_label }}</dd>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <dt class="text-secondary fw-normal small">Status</dt>
+                            <dd class="mb-0">
+                                <span class="badge rounded-pill bg-{{ pc }}-soft text-{{ pc }} px-2 py-1 small">
+                                    <i class="bi {{ pi }} me-1"></i>{{ pl }}
+                                </span>
+                            </dd>
+                        </div>
+                        {% if order.payment.transaction_id %}
+                        <div class="d-flex justify-content-between py-2">
+                            <dt class="text-secondary fw-normal small">Transaction ID</dt>
+                            <dd class="mb-0 font-monospace small fw-semibold">{{ order.payment.transaction_id }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Shipping address -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Shipping To</h6>
+                    <p class="text-secondary small mb-0 lh-lg">
+                        {{ order.shipping_address | replace(' | ', '<br>') | safe }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('orders.my_orders') }}" class="btn btn-outline-secondary rounded-pill btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Orders
+        </a>
+    </div>
+</div>
+
+<!-- Cancel modal -->
+{% if order.can_cancel %}
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-body p-4 text-center">
+                <div class="cancel-modal-icon mx-auto mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i>
+                </div>
+                <h6 class="fw-bold">Cancel {{ order.order_number_display }}?</h6>
+                <p class="text-secondary small mb-3">This action cannot be undone. Stock will be restored.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                            data-bs-dismiss="modal">Keep Order</button>
+                    <form method="POST" action="{{ url_for('orders.cancel_order', order_id=order.id) }}">
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3">
+                            Yes, Cancel
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

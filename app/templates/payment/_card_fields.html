@@ -1,0 +1,28 @@
+<div class="row g-3">
+    <div class="col-12">
+        <label class="form-label small fw-semibold">Card Number <span class="text-danger">*</span></label>
+        <input type="text" name="card_number" class="form-control rounded-3 font-monospace"
+               placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="cc-number" inputmode="numeric">
+    </div>
+    <div class="col-12">
+        <label class="form-label small fw-semibold">Cardholder Name <span class="text-danger">*</span></label>
+        <input type="text" name="card_name" class="form-control rounded-3"
+               placeholder="Name as on card" autocomplete="cc-name">
+    </div>
+    <div class="col-6">
+        <label class="form-label small fw-semibold">Expiry Date <span class="text-danger">*</span></label>
+        <input type="text" name="expiry" class="form-control rounded-3"
+               placeholder="MM/YY" maxlength="5" autocomplete="cc-exp" inputmode="numeric">
+    </div>
+    <div class="col-6">
+        <label class="form-label small fw-semibold">CVV <span class="text-danger">*</span></label>
+        <div class="input-group">
+            <input type="password" name="cvv" id="cvvInput"
+                   class="form-control rounded-3 rounded-end-0 font-monospace"
+                   placeholder="•••" maxlength="4" autocomplete="cc-csc" inputmode="numeric">
+            <button type="button" class="btn btn-outline-secondary toggle-pwd" data-target="cvvInput">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+    </div>
+</div>
